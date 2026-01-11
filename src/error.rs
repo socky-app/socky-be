@@ -9,7 +9,7 @@ use axum::{
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Main crate error
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Error {
     // Config
     ConfigMissingEnv(&'static str),
@@ -18,6 +18,7 @@ pub enum Error {
     // Auth
     AuthFailNoAuthTokenCookie,
     AuthFailWrongTokenFormat,
+    AuthFailCtxNotInRequestExt,
 
     // Login
     LoginFail,
