@@ -7,18 +7,18 @@ edition = "2021"
 
 [dependencies]
 # Async
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 async-trait = "0.1.79"
 # Web
-axum = "0.7.4"
-tower-cookies = "0.10.0"
-tower-http = { version = "0.5.2", features = ["fs"] }
+axum = "0.8.8"
+tower-cookies = "0.11.0"
+tower-http = { version = "0.6.8", features = ["fs"] }
 # Json
 serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
+serde_json = "1.0.149"
 serde_with = "3.7.0"
 # Tracing
-tracing = "0.1.40"
+tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 [dev-dependencies]
