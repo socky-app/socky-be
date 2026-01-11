@@ -1,6 +1,6 @@
 //! Simplistic model layer
 
-use crate::{Error, Result};
+use crate::{Error, Result, ctx::{self, Ctx}};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
@@ -14,6 +14,7 @@ pub struct Money {
 #[derive(Clone, Debug, Serialize)]
 pub struct Transaction {
     pub id: u64,
+    pub cid: u64,
     pub title: String,
     pub value: Money,
 }
@@ -40,6 +41,7 @@ impl ModelController {
 impl ModelController {
     pub async fn create_transaction(
         &self,
+        ctx: Ctx,
         transaction_fc: TransactionForCreate,
     ) -> Result<Transaction> {
         let mut store = self.transactions_store.lock().unwrap();
@@ -47,6 +49,7 @@ impl ModelController {
         let id = store.len() as u64;
         let transaction = Transaction {
             id,
+            cid: ctx.user_id(),
             title: transaction_fc.title,
             value: transaction_fc.value,
         };
@@ -55,7 +58,7 @@ impl ModelController {
         Ok(transaction)
     }
 
-    pub async fn list_transactions(&self) -> Result<Vec<Transaction>> {
+    pub async fn list_transactions(&self, _ctx: Ctx) -> Result<Vec<Transaction>> {
         let store = self.transactions_store.lock().unwrap();
 
         let transactions = store.iter().filter_map(|t| t.clone()).collect();
@@ -63,7 +66,7 @@ impl ModelController {
         Ok(transactions)
     }
 
-    pub async fn delete_transaction(&self, transaction_id: u64) -> Result<Transaction> {
+    pub async fn delete_transaction(&self, _ctx: Ctx, transaction_id: u64) -> Result<Transaction> {
         let mut store = self.transactions_store.lock().unwrap();
 
         let transaction = store
@@ -73,7 +76,7 @@ impl ModelController {
         transaction.ok_or(Error::TransactionDeleteFailIdNotFound { id: transaction_id })
     }
 
-    pub async fn get_transaction(&self, transaction_id: u64) -> Result<Transaction> {
+    pub async fn get_transaction(&self, _ctx: Ctx, transaction_id: u64) -> Result<Transaction> {
         let store = self.transactions_store.lock().unwrap();
 
         let transaction = store.get(transaction_id as usize).and_then(|t| t.clone());
