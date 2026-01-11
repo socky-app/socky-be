@@ -9,6 +9,7 @@ use axum::{
     Router,
 };
 use tokio::net::TcpListener;
+use tower_cookies::CookieManagerLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -30,7 +31,8 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .merge(routes_hello())
         .merge(web::routes_login::routes())
-        .layer(middleware::map_response(main_response_mapper));
+        .layer(middleware::map_response(main_response_mapper))
+        .layer(CookieManagerLayer::new());
 
     // Start server
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
