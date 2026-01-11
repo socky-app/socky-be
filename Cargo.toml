@@ -22,8 +22,10 @@ rust_decimal = "1.39.0"
 # Tracing
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-#Others
+# Others
 lazy-regex = "3.5.1"
+strum_macros = "0.27.2"
+uuid = { version = "1.19.0", features = ["v4","fast-rng"] }
 
 [dev-dependencies]
 anyhow = "1.0.81"
