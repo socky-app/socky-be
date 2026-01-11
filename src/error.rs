@@ -17,6 +17,9 @@ pub enum Error {
 
     // Login
     LoginFail,
+
+    // Model
+    TransactionDeleteFailIdNotFound{ id: u64 },
 }
 
 impl fmt::Display for Error {

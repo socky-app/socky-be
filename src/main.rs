@@ -13,10 +13,13 @@ use tower_cookies::CookieManagerLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
+use crate::model::ModelController;
+
 pub use self::error::{Error, Result};
 
 mod config;
 mod error;
+mod model;
 mod web;
 
 /// Entrypoint for the backend service
@@ -28,9 +31,14 @@ async fn main() -> Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+    // Initialize ModelController
+    let mc = ModelController::new().await?;
+
+    // Create app Router
     let app = Router::new()
         .merge(routes_hello())
         .merge(web::routes_login::routes())
+        .nest("/api", web::routes_transaction::routes(mc.clone()))
         .layer(middleware::map_response(main_response_mapper))
         .layer(CookieManagerLayer::new());
 
