@@ -15,6 +15,10 @@ pub enum Error {
     ConfigMissingEnv(&'static str),
     ConfigWrongFormat(&'static str),
 
+    // Auth
+    AuthFailNoAuthTokenCookie,
+    AuthFailWrongTokenFormat,
+
     // Login
     LoginFail,
 
