@@ -1,11 +1,13 @@
 //! Backend of the Socky application
 
-#![allow(unused)] // for development only.
-
 use std::net::SocketAddr;
 
 use axum::{
-    Json, Router, middleware, response::{Html, IntoResponse, Response}, routing::get
+    http::{Method, Uri},
+    middleware,
+    response::{Html, IntoResponse, Response},
+    routing::get,
+    Json, Router,
 };
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -14,13 +16,14 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
-use crate::model::ModelController;
+use crate::{ctx::Ctx, log::log_request, model::ModelController};
 
 pub use self::error::{Error, Result};
 
 mod config;
 mod ctx;
 mod error;
+mod log;
 mod model;
 mod web;
 
@@ -45,7 +48,10 @@ async fn main() -> Result<()> {
         .merge(web::routes_login::routes())
         .nest("/api", routes_api)
         .layer(middleware::map_response(main_response_mapper))
-        .layer(middleware::from_fn_with_state(mc.clone(), web::mw_auth::mw_ctx_resolver))
+        .layer(middleware::from_fn_with_state(
+            mc.clone(),
+            web::mw_auth::mw_ctx_resolver,
+        ))
         .layer(CookieManagerLayer::new());
 
     // Start server
@@ -57,7 +63,12 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn main_response_mapper(res: Response) -> Response {
+async fn main_response_mapper(
+    ctx: Result<Ctx>,
+    uri: Uri,
+    req_method: Method,
+    res: Response,
+) -> Response {
     println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
 
     let uuid = Uuid::new_v4();
@@ -81,8 +92,8 @@ async fn main_response_mapper(res: Response) -> Response {
             (*status_code, Json(client_error_body)).into_response()
         });
 
-    // TODO: build and log server log line
-    println!("  ->> server log line - {uuid} - Error: {service_error:?}");
+    let client_error = client_status_error.unzip().1;
+    let _ = log_request(uuid, req_method, uri, ctx.ok(), service_error, client_error).await;
 
     println!();
     error_response.unwrap_or(res)

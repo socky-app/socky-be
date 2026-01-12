@@ -4,12 +4,14 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use serde::Serialize;
 
 /// Main crate Result alias
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Main crate error
-#[derive(Debug, Clone, strum_macros::AsRefStr)]
+#[derive(Debug, Clone, Serialize, strum_macros::AsRefStr)]
+#[serde(tag = "type", content = "data")]
 pub enum Error {
     // Config
     ConfigMissingEnv(&'static str),
