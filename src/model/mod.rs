@@ -1,6 +1,6 @@
 //! Simplistic model layer
 
-use crate::{Error, Result, ctx::{self, Ctx}};
+use crate::{Error, Result, ctx::Ctx};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};

@@ -4,7 +4,7 @@ use axum::routing::{delete, post};
 use axum::{extract::State, Json};
 
 use crate::ctx::Ctx;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::model::{ModelController, Transaction, TransactionForCreate};
 
 pub fn routes(mc: ModelController) -> Router {

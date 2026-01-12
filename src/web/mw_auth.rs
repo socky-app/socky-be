@@ -1,11 +1,10 @@
-use axum::RequestPartsExt;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum::{extract::Request, middleware::Next, response::Response};
 use lazy_regex::regex_captures;
 use tower_cookies::{Cookie, Cookies};
 
-use crate::ctx::{self, Ctx};
+use crate::ctx::Ctx;
 use crate::error::{Error, Result};
 use crate::web::AUTH_TOKEN;
 
