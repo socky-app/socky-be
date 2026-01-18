@@ -1,7 +1,8 @@
-use axum::Router;
 use axum::extract::Path;
 use axum::routing::{delete, post};
+use axum::Router;
 use axum::{extract::State, Json};
+use tracing::debug;
 
 use crate::ctx::Ctx;
 use crate::error::Result;
@@ -9,17 +10,23 @@ use crate::model::{ModelController, Transaction, TransactionForCreate};
 
 pub fn routes(mc: ModelController) -> Router {
     Router::new()
-        .route("/transaction", post(create_transaction).get(list_transactions))
-        .route("/transaction/{id}", delete(delete_transaction).get(get_transaction))
+        .route(
+            "/transaction",
+            post(create_transaction).get(list_transactions),
+        )
+        .route(
+            "/transaction/{id}",
+            delete(delete_transaction).get(get_transaction),
+        )
         .with_state(mc)
-    }
+}
 
 async fn create_transaction(
     State(mc): State<ModelController>,
     ctx: Ctx,
     Json(transaction_fc): Json<TransactionForCreate>,
 ) -> Result<Json<Transaction>> {
-    println!("->> {:<12} - create_transaction", "HANDLER");
+    debug!("{:<12} - create_transaction", "HANDLER");
 
     let trasaction = mc.create_transaction(ctx, transaction_fc).await?;
 
@@ -30,7 +37,7 @@ async fn list_transactions(
     State(mc): State<ModelController>,
     ctx: Ctx,
 ) -> Result<Json<Vec<Transaction>>> {
-    println!("->> {:<12} - list_transactions", "HANDLER");
+    debug!("{:<12} - list_transactions", "HANDLER");
 
     let trasactions = mc.list_transactions(ctx).await?;
 
@@ -42,7 +49,7 @@ async fn delete_transaction(
     ctx: Ctx,
     Path(id): Path<u64>,
 ) -> Result<Json<Transaction>> {
-    println!("->> {:<12} - delete_transaction", "HANDLER");
+    debug!("{:<12} - delete_transaction", "HANDLER");
 
     let trasaction = mc.delete_transaction(ctx, id).await?;
 
@@ -54,7 +61,7 @@ async fn get_transaction(
     ctx: Ctx,
     Path(id): Path<u64>,
 ) -> Result<Json<Transaction>> {
-    println!("->> {:<12} - get_transaction", "HANDLER");
+    debug!("{:<12} - get_transaction", "HANDLER");
 
     let trasaction = mc.get_transaction(ctx, id).await?;
 

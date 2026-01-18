@@ -3,21 +3,22 @@ use axum::http::request::Parts;
 use axum::{extract::Request, middleware::Next, response::Response};
 use lazy_regex::regex_captures;
 use tower_cookies::{Cookie, Cookies};
+use tracing::debug;
 
 use crate::ctx::Ctx;
 use crate::error::{Error, Result};
 use crate::web::AUTH_TOKEN;
 
 pub async fn mw_require_auth(ctx: Result<Ctx>, req: Request, next: Next) -> Result<Response> {
-    println!("->> {:<12} - mw_require_auth", "MIDDLEWARE");
-    
+    debug!("{:<12} - mw_require_auth", "MIDDLEWARE");
+
     ctx?;
 
     Ok(next.run(req).await)
 }
 
 pub async fn mw_ctx_resolver(cookies: Cookies, mut req: Request, next: Next) -> Result<Response> {
-    println!("->> {:<12} - mw_ctx_resolver", "MIDDLEWARE");
+    debug!("{:<12} - mw_ctx_resolver", "MIDDLEWARE");
 
     let auth_token = cookies.get(AUTH_TOKEN).map(|c| c.value().to_string());
 
@@ -28,7 +29,7 @@ pub async fn mw_ctx_resolver(cookies: Cookies, mut req: Request, next: Next) -> 
         Ok((user_id, _exp, _sign)) => {
             // TODO: Real auth-token validation
             Ok(Ctx::new(user_id))
-        },
+        }
         Err(e) => Err(e),
     };
 
@@ -50,7 +51,7 @@ where
     type Rejection = Error;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self> {
-        println!("->> {:<12} - ctx", "EXTRACTOR");
+        debug!("{:<12} - ctx", "EXTRACTOR");
 
         parts
             .extensions
@@ -61,10 +62,8 @@ where
 }
 
 fn parse_token(token: String) -> Result<(u64, String, String)> {
-    let (_whole, user_id, exp, sign) = regex_captures!(
-        r#"^user-(\d+)\.(.+)\.(.+)"#,
-        &token
-    ).ok_or(Error::AuthFailWrongTokenFormat)?;
+    let (_whole, user_id, exp, sign) = regex_captures!(r#"^user-(\d+)\.(.+)\.(.+)"#, &token)
+        .ok_or(Error::AuthFailWrongTokenFormat)?;
 
     let user_id: u64 = user_id
         .parse()

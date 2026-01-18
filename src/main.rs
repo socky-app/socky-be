@@ -12,7 +12,7 @@ use axum::{
 use serde_json::json;
 use tokio::net::TcpListener;
 use tower_cookies::CookieManagerLayer;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
@@ -69,7 +69,7 @@ async fn main_response_mapper(
     req_method: Method,
     res: Response,
 ) -> Response {
-    println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
+    debug!("{:<12} - main_response_mapper", "RES_MAPPER");
 
     let uuid = Uuid::new_v4();
 
@@ -88,14 +88,14 @@ async fn main_response_mapper(
                 }
             });
 
-            println!("  ->> client_error_body: {client_error_body}");
+            debug!("{:<12}\n{client_error_body}", "CLIENT ERROR BODY");
             (*status_code, Json(client_error_body)).into_response()
         });
 
     let client_error = client_status_error.unzip().1;
     let _ = log_request(uuid, req_method, uri, ctx.ok(), service_error, client_error).await;
 
-    println!();
+    debug!("\n");
     error_response.unwrap_or(res)
 }
 
@@ -103,7 +103,7 @@ fn routes_hello() -> Router {
     Router::new().route(
         "/hello",
         get(|| async {
-            println!("->> {:<12} - hello", "HANDLER");
+            debug!("{:<12} - hello", "HANDLER");
             Html("Hello <strong>World!!!</strong>")
         }),
     )
