@@ -13,10 +13,12 @@ use crate::{
     web::{
         mw_auth::{mw_ctx_resolver, mw_require_auth},
         mw_res_map::mw_res_map,
+        routes_login, routes_static, routes_transaction,
     },
 };
 
 pub use self::error::{Error, Result};
+pub use config::config;
 
 mod config;
 mod ctx;
@@ -37,17 +39,18 @@ async fn main() -> Result<()> {
     // Initialize ModelController
     let mc = ModelController::new().await?;
 
-    let routes_api = web::routes_transaction::routes(mc.clone())
-        .route_layer(middleware::from_fn(mw_require_auth));
+    let routes_api =
+        routes_transaction::routes(mc.clone()).route_layer(middleware::from_fn(mw_require_auth));
 
     // Create app Router
     let app = Router::new()
         .merge(routes_hello())
-        .merge(web::routes_login::routes())
+        .merge(routes_login::routes())
         .nest("/api", routes_api)
         .layer(middleware::map_response(mw_res_map))
         .layer(middleware::from_fn_with_state(mc.clone(), mw_ctx_resolver))
-        .layer(CookieManagerLayer::new());
+        .layer(CookieManagerLayer::new())
+        .fallback_service(routes_static::serve_dir());
 
     // Start server
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));

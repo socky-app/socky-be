@@ -22,3 +22,4 @@ SERVICE_DB_URL="postgres://app_user:dev_only_pwd@localhost/socky_db"
 
 ## Config
 
+SERVICE_WEB_FOLDER="web-folder/"
