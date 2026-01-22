@@ -1,20 +1,36 @@
-use sqlx::{PgPool, QueryBuilder};
+use crate::{
+    model::transaction::{
+        CreateTransactionDto, TransactionEntity, TransactionQueryDto, UpdateTransactionDto,
+    },
+    repository::{
+        crud,
+        helper::{commit_db_transaction, start_db_transaction},
+        Error, RepositoryManager, Result,
+    },
+};
 use chrono::Utc;
-use crate::{model::transaction::{CreateTransactionDto, TransactionEntity, TransactionQueryDto, UpdateTransactionDto}, repository::{Error, RepositoryManager, Result}};
+use sqlx::{PgPool, QueryBuilder};
 
 /// Transaction repository for database operations
 pub struct TransactionRepository;
 
-// TODO: Extract this logic into base repository
+impl crud::Crud for TransactionRepository {
+    const TABLE: &'static str = "transaction";
+}
 
 impl TransactionRepository {
-    fn format_query(query: &TransactionQueryDto, query_builder: &mut QueryBuilder<'_, sqlx::Postgres>) {
+    fn format_query(
+        query: &TransactionQueryDto,
+        query_builder: &mut QueryBuilder<'_, sqlx::Postgres>,
+    ) {
         if let Some(cid) = query.cid {
             query_builder.push(" AND cid = ").push_bind(cid);
         }
         if let Some(title) = &query.title {
             if !title.trim().is_empty() {
-                query_builder.push(" AND title ILIKE ").push_bind(format!("%{}%", title));
+                query_builder
+                    .push(" AND title ILIKE ")
+                    .push_bind(format!("%{}%", title));
             }
         }
     }
@@ -26,23 +42,30 @@ impl TransactionRepository {
 
         Self::format_query(query, &mut query_builder);
 
-        let count: (i64,) = query_builder.build_query_as().fetch_one(rm.pool()).await.inspect_err(|e| {
-            tracing::error!("Database error counting transactions: {:?}", e);
-        })?;
-        
+        let count: (i64,) = query_builder
+            .build_query_as()
+            .fetch_one(rm.pool())
+            .await
+            .inspect_err(|e| {
+                tracing::error!("Database error counting transactions: {:?}", e);
+            })?;
+
         tracing::info!("transaction count: {:?}", count);
 
         Ok(count.0)
     }
 
-    /// Find transactions with pagination and filters
-    pub async fn find_with_pagination(
+    /// List transactions with pagination and filters
+    pub async fn list_with_pagination(
         rm: RepositoryManager,
         offset: i64,
         limit: i64,
         query: TransactionQueryDto,
     ) -> Result<(Vec<TransactionEntity>, i64)> {
-        tracing::debug!("Finding transactions with pagination and filters: {:?}", query);
+        tracing::debug!(
+            "Finding transactions with pagination and filters: {:?}",
+            query
+        );
         let total = Self::count_transactions(rm.clone(), &query).await?;
         if total == 0 {
             return Ok((Vec::new(), total));
@@ -57,110 +80,92 @@ impl TransactionRepository {
         query_builder.push(" LIMIT ").push_bind(limit);
         query_builder.push(" OFFSET ").push_bind(offset);
 
-        let transactions = query_builder.build_query_as().fetch_all(rm.pool()).await.inspect_err(|e| {
-            tracing::error!("Database error in transaction pagination: {:?}", e);
-        })?;
+        let transactions = query_builder
+            .build_query_as()
+            .fetch_all(rm.pool())
+            .await
+            .inspect_err(|e| {
+                tracing::error!("Database error in transaction pagination: {:?}", e);
+            })?;
 
         Ok((transactions, total))
     }
 
-    /// Find transaction by ID
-    pub async fn find_by_id(
-        rm: RepositoryManager,
-        id: i64,
-    ) -> Result<Option<TransactionEntity>> {
-        let result =
-            sqlx::query_as::<_, TransactionEntity>("SELECT * FROM transaction WHERE id = $1")
-                .bind(id)
-                .fetch_optional(rm.pool())
-                .await
-                .map_err(|e| {
-                    tracing::error!("Database error finding transaction by ID {}: {:?}", id, e);
-                    Error::NotFound { entity: "transaction", id }
-                })?;
-
-        Ok(result)
+    /// Get transaction by ID
+    pub async fn get(rm: RepositoryManager, id: i64) -> Result<TransactionEntity> {
+        crud::get::<Self, _, _>(id, rm.pool()).await
     }
 
     /// Create new transaction
-    pub async fn create_transaction(rm: RepositoryManager, dto: &CreateTransactionDto) -> Result<i64> {
-        let mut tx = rm.pool().begin().await.inspect_err(|e| {
-            tracing::error!("Database error starting transaction for transaction creation: {:?}", e);
-        })?;
+    pub async fn create(rm: RepositoryManager, dto: &CreateTransactionDto) -> Result<i64> {
+        let mut tx = start_db_transaction(&rm).await?;
 
-        // Create transaction
-        let transaction_id = sqlx::query_scalar::<_, i64>(
-            "INSERT INTO transaction (cid, title, amount, currency)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id",
-        )
-        .bind(dto.cid)
-        .bind(&dto.title)
-        .bind(dto.value.amount)
-        .bind(&dto.value.currency)
-        .fetch_one(&mut *tx)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error creating transaction: {:?}", e);
-        })?;
+        let transaction_id = crud::create::<Self, _, _>(dto, &mut *tx).await?;
 
-        tx.commit().await.inspect_err(|e| {
-            tracing::error!("Database error committing transaction: {:?}", e);
-        })?;
+        commit_db_transaction(tx).await?;
 
         Ok(transaction_id)
     }
 
     /// Update existing transaction
-    pub async fn update_transaction(
-        rm: RepositoryManager,
-        id: i64,
-        dto: &UpdateTransactionDto
-    ) -> Result<i64> {
-        let mut tx = rm.pool().begin().await.inspect_err(|e| {
-            tracing::error!("Database error starting transaction for transaction update: {:?}", e);
-        })?;
+    pub async fn update(rm: RepositoryManager, id: i64, dto: &UpdateTransactionDto) -> Result<i64> {
+        let mut tx = start_db_transaction(&rm).await?;
 
-        let transaction_id = sqlx::query_scalar::<_, i64>(
-            "UPDATE transaction
-            SET title = $1, amount = $2, currency = $3
-            WHERE id = $4
-            RETURNING id",
-        )
-        .bind(&dto.title)
-        .bind(dto.value.amount)
-        .bind(&dto.value.currency)
-        .bind(id)
-        .fetch_optional(&mut *tx)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error updating transaction ID {}: {:?}", id, e);
-        })?;
+        let transaction_id = crud::update::<Self, _, _>(id, dto, &mut *tx).await?;
 
-        if let Some(id) = transaction_id {
-            tx.commit().await.inspect_err(|e| {
-                tracing::error!("Database error committing transaction: {:?}", e);
-            })?;
-            Ok(id)
-        } else {
-            Err(Error::NotFound { entity: "transaction", id})
-        }
+        commit_db_transaction(tx).await?;
+
+        Ok(transaction_id)
     }
 
     /// Delete transaction
-    pub async fn delete(rm: RepositoryManager, id: i64) -> Result<bool> {
-        let result =
-            sqlx::query("DELETE FROM transactions WHERE id = $1")
-                .bind(id)
-                .execute(rm.pool())
-                .await
-                .map_err(|e| {
-                    tracing::error!("Database error deleting transaction ID {}: {:?}", id, e);
-                    Error::NotFound { entity: "transaction", id }
-                })?;
-
-        Ok(result.rows_affected() > 0)
+    pub async fn delete(rm: RepositoryManager, id: i64) -> Result<()> {
+        crud::delete::<Self, _>(id, rm.pool()).await
     }
 
     // TODO: soft delete
+}
+
+impl crud::Insertable for CreateTransactionDto {
+    fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, sqlx::Postgres>) {
+        query_builder
+            .push("(cid, title, amount, currency) VALUES (")
+            .push_bind(self.cid)
+            .push(", ")
+            .push_bind(&self.title)
+            .push(", ")
+            .push_bind(self.value.amount)
+            .push(", ")
+            .push_bind(&self.value.currency)
+            .push(")");
+    }
+}
+
+impl crud::Updatable for UpdateTransactionDto {
+    fn push_update<'q>(&'q self, b: &mut QueryBuilder<'q, sqlx::Postgres>) {
+        let mut first = true;
+
+        if let Some(title) = &self.title {
+            if !first {
+                b.push(", ");
+            }
+            b.push("title = ").push_bind(title);
+            first = false;
+        }
+
+        if let Some(value) = &self.value {
+            // assume value has fields `amount` and `currency`
+            if !first {
+                b.push(", ");
+            }
+            b.push("amount = ").push_bind(value.amount);
+            b.push(", ");
+            b.push("currency = ").push_bind(&value.currency);
+            first = false;
+        }
+
+        // TODO: always update updated_at
+        // if !first { b.push(", "); }
+        // b.push("updated_at = ").push_bind(Utc::now());
+    }
 }

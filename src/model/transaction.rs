@@ -30,8 +30,8 @@ pub struct CreateTransactionDto {
 /// Transaction update parameters.
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateTransactionDto {
-    pub title: String,
-    pub value: Money,
+    pub title: Option<String>,
+    pub value: Option<Money>,
 }
 
 /// Transaction for list display.
