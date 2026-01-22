@@ -1,4 +1,4 @@
-//! Web utilities and route registrations for the application.
+//! Web layer.
 
 pub mod mw_auth;
 pub mod mw_res_map;

@@ -6,9 +6,10 @@ use tracing::debug;
 
 use crate::ctx::Ctx;
 use crate::error::Result;
-use crate::model::{ModelController, Transaction, TransactionForCreate};
+use crate::model::transaction::{CreateTransactionDto, TransactionEntity, TransactionVo};
+use crate::repository::RepositoryManager;
 
-pub fn routes(mc: ModelController) -> Router {
+pub fn routes(mc: RepositoryManager) -> Router {
     Router::new()
         .route(
             "/transaction",
@@ -22,48 +23,40 @@ pub fn routes(mc: ModelController) -> Router {
 }
 
 async fn create_transaction(
-    State(mc): State<ModelController>,
+    State(mc): State<RepositoryManager>,
     ctx: Ctx,
-    Json(transaction_fc): Json<TransactionForCreate>,
-) -> Result<Json<Transaction>> {
+    Json(transaction_fc): Json<CreateTransactionDto>,
+) -> Result<Json<TransactionVo>> {
     debug!("{:<12} - create_transaction", "HANDLER");
 
-    let trasaction = mc.create_transaction(ctx, transaction_fc).await?;
-
-    Ok(Json(trasaction))
+    todo!()
 }
 
 async fn list_transactions(
-    State(mc): State<ModelController>,
+    State(mc): State<RepositoryManager>,
     ctx: Ctx,
-) -> Result<Json<Vec<Transaction>>> {
+) -> Result<Json<Vec<TransactionVo>>> {
     debug!("{:<12} - list_transactions", "HANDLER");
 
-    let trasactions = mc.list_transactions(ctx).await?;
-
-    Ok(Json(trasactions))
+    todo!()
 }
 
 async fn delete_transaction(
-    State(mc): State<ModelController>,
+    State(mc): State<RepositoryManager>,
     ctx: Ctx,
-    Path(id): Path<u64>,
-) -> Result<Json<Transaction>> {
+    Path(id): Path<i64>,
+) -> Result<Json<()>> {
     debug!("{:<12} - delete_transaction", "HANDLER");
 
-    let trasaction = mc.delete_transaction(ctx, id).await?;
-
-    Ok(Json(trasaction))
+    todo!()
 }
 
 async fn get_transaction(
-    State(mc): State<ModelController>,
+    State(mc): State<RepositoryManager>,
     ctx: Ctx,
-    Path(id): Path<u64>,
-) -> Result<Json<Transaction>> {
+    Path(id): Path<i64>,
+) -> Result<Json<TransactionVo>> {
     debug!("{:<12} - get_transaction", "HANDLER");
 
-    let trasaction = mc.get_transaction(ctx, id).await?;
-
-    Ok(Json(trasaction))
+    todo!()
 }

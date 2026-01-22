@@ -4,11 +4,33 @@ Backend repository for the Socky application
 
 ## Usage
 
-TODO: Add usage instructions with conventional setup, with docker and docker compose
+TODO: Add usage instructions with conventional setup, using docker and docker compose
 
 ## Development
 
 > NOTE: Install cargo watch with `cargo install cargo-watch`.
+
+### Starting the DB
+
+Start postgresql server docker image:
+
+```sh
+docker run --rm --name pg -p 5432:5432 \
+   -e POSTGRES_PASSWORD=welcome \
+   postgres:15
+```
+
+To have a psql terminal on pg, run psql on another terminal:
+
+```sh
+docker exec -it -u postgres pg psql
+```
+
+For pg to print all sql statements, run in psql:
+
+```sh
+ALTER DATABASE postgres SET log_statement = 'all';
+```
 
 ### Quick Dev
 

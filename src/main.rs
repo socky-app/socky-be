@@ -1,5 +1,7 @@
 //! Backend of the Socky application
 
+#![allow(unused)]
+
 use std::net::SocketAddr;
 
 use axum::{middleware, response::Html, routing::get, Router};
@@ -9,7 +11,7 @@ use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
-    model::ModelController,
+    repository::RepositoryManager,
     web::{
         mw_auth::{mw_ctx_resolver, mw_require_auth},
         mw_res_map::mw_res_map,
@@ -20,6 +22,8 @@ use crate::{
 pub use self::error::{Error, Result};
 pub use config::config;
 
+mod repository;
+mod service;
 mod config;
 mod ctx;
 mod error;
@@ -36,11 +40,11 @@ async fn main() -> Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    // Initialize ModelController
-    let mc = ModelController::new().await?;
+    // Initialize RepositoryManager
+    let rm = RepositoryManager::new().await.unwrap(); // TODO: fix
 
     let routes_api =
-        routes_transaction::routes(mc.clone()).route_layer(middleware::from_fn(mw_require_auth));
+        routes_transaction::routes(rm.clone()).route_layer(middleware::from_fn(mw_require_auth));
 
     // Create app Router
     let app = Router::new()
@@ -48,7 +52,7 @@ async fn main() -> Result<()> {
         .merge(routes_login::routes())
         .nest("/api", routes_api)
         .layer(middleware::map_response(mw_res_map))
-        .layer(middleware::from_fn_with_state(mc.clone(), mw_ctx_resolver))
+        .layer(middleware::from_fn_with_state(rm.clone(), mw_ctx_resolver))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static::serve_dir());
 

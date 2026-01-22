@@ -5,7 +5,7 @@
 [env]
 
 # Scope down tracing, to filter out external lib tracing.
-RUST_LOG="socky_be=info"
+RUST_LOG="socky_be=debug"
 
 # Service Environment Variables
 # IMPORTANT: 

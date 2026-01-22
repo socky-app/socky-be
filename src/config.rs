@@ -1,41 +1,59 @@
-use crate::{Error, Result};
-use std::env;
-use std::str::FromStr;
+use figment::Figment;
+use figment::providers::{Env, Serialized};
+use serde::{Deserialize, Serialize};
+
 use std::sync::OnceLock;
 
 pub fn config() -> &'static Config {
     static INSTANCE: OnceLock<Config> = OnceLock::new();
 
     INSTANCE.get_or_init(|| {
-        Config::load_from_env()
-            .unwrap_or_else(|ex| panic!("FATAL - WHILE LOADING CONF - Cause: {ex:?}"))
+        let config: Config = Figment::new()
+        .merge(Serialized::defaults(Config::default()))
+        .merge(Env::prefixed("SOCKY_"))
+        .extract()
+        .expect("Failed to load configuration");
+
+        tracing::info!("CONFIG: {:?}", config);
+        config
     })
 }
 
-#[allow(non_snake_case)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    // Db
-    pub DB_URL: String,
+    /// application port
+    pub app_port: u16,
+    /// application host
+    pub app_host: String,
 
-    // Web
-    pub WEB_FOLDER: String,
+    /// database URL
+    pub db_url: String,
+    /// database maximum connection count
+    pub db_max_conn: u32,
+    /// database minimum connection count
+    pub db_min_conn: u32,
+    /// database connection timeout
+    pub db_conn_timeout: u64,
+    /// database idle connection timeout
+    pub db_idle_timeout: u64,
+    /// JWT secret key
+
+    /// web folder path
+    pub web_folder: String,
 }
 
-impl Config {
-    fn load_from_env() -> Result<Config> {
-        Ok(Config {
-            // -- Db
-            DB_URL: get_env("SERVICE_DB_URL")?,
-            WEB_FOLDER: get_env("SERVICE_WEB_FOLDER")?,
-        })
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            app_port: 8000,
+            app_host: "0.0.0.0".into(),
+            db_url: "sqlite://socky.db".into(),
+            db_max_conn: 10,
+            db_min_conn: 1,
+            db_conn_timeout: 10,
+            db_idle_timeout: 0,
+            web_folder: "web-folder".into(),
+        }
     }
-}
-
-fn get_env(name: &'static str) -> Result<String> {
-    env::var(name).map_err(|_| Error::ConfigMissingEnv(name))
-}
-
-fn _get_env_parse<T: FromStr>(name: &'static str) -> Result<T> {
-    let val = get_env(name)?;
-    val.parse::<T>().map_err(|_| Error::ConfigWrongFormat(name))
 }
