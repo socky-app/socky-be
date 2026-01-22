@@ -98,24 +98,12 @@ impl TransactionRepository {
 
     /// Create new transaction
     pub async fn create(rm: RepositoryManager, dto: &CreateTransactionDto) -> Result<i64> {
-        let mut tx = start_db_transaction(&rm).await?;
-
-        let transaction_id = crud::create::<Self, _, _>(dto, &mut *tx).await?;
-
-        commit_db_transaction(tx).await?;
-
-        Ok(transaction_id)
+        crud::create::<Self, _, _>(dto, rm.pool()).await
     }
 
     /// Update existing transaction
     pub async fn update(rm: RepositoryManager, id: i64, dto: &UpdateTransactionDto) -> Result<i64> {
-        let mut tx = start_db_transaction(&rm).await?;
-
-        let transaction_id = crud::update::<Self, _, _>(id, dto, &mut *tx).await?;
-
-        commit_db_transaction(tx).await?;
-
-        Ok(transaction_id)
+        crud::update::<Self, _, _>(id, dto, rm.pool()).await
     }
 
     /// Delete transaction
