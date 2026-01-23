@@ -4,7 +4,7 @@ use sqlx::{Executor, QueryBuilder};
 
 use std::fmt::Debug;
 
-pub trait Crud {
+pub trait DatabaseTable {
     const TABLE: &'static str;
 }
 
@@ -19,7 +19,7 @@ pub trait Updatable {
     fn push_update<'r>(&'r self, b: &mut QueryBuilder<'r, Postgres>);
 }
 
-pub trait Create: Crud + Sized {
+pub trait Create: DatabaseTable + Sized {
     type D: Insertable + ?Sized;
 
     async fn create(rm: &RepositoryManager, dto: &Self::D) -> Result<i64> {
@@ -29,12 +29,11 @@ pub trait Create: Crud + Sized {
 
 pub async fn create<'c, R, D, E>(dto: &D, executor: E) -> Result<i64>
 where
-    R: Crud,
+    R: DatabaseTable,
     D: Insertable + ?Sized,
     E: Executor<'c, Database = Postgres> + Send,
 {
-    let mut query_builder =
-        QueryBuilder::<Postgres>::new(&format!("INSERT INTO {} ", R::TABLE));
+    let mut query_builder = QueryBuilder::<Postgres>::new(&format!("INSERT INTO {} ", R::TABLE));
     dto.push_insert(&mut query_builder);
     query_builder.push(" RETURNING id");
 
@@ -49,7 +48,7 @@ where
     Ok(id)
 }
 
-pub trait Get: Crud + Sized {
+pub trait Get: DatabaseTable + Sized {
     type T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin;
 
     async fn get(rm: &RepositoryManager, id: i64) -> Result<Self::T> {
@@ -59,7 +58,7 @@ pub trait Get: Crud + Sized {
 
 pub async fn get<'c, R, T, E>(id: i64, executor: E) -> Result<T>
 where
-    R: Crud,
+    R: DatabaseTable,
     T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
     E: Executor<'c, Database = Postgres> + Send,
 {
@@ -85,7 +84,7 @@ where
     }
 }
 
-pub trait Update: Crud + Sized {
+pub trait Update: DatabaseTable + Sized {
     type D: Updatable;
 
     async fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> Result<i64> {
@@ -95,7 +94,7 @@ pub trait Update: Crud + Sized {
 
 pub async fn update<'c, R, D, E>(id: i64, dto: &D, executor: E) -> Result<i64>
 where
-    R: Crud,
+    R: DatabaseTable,
     D: Updatable,
     E: Executor<'c, Database = sqlx::Postgres>,
 {
@@ -124,7 +123,7 @@ where
     }
 }
 
-pub trait Delete: Crud + Sized {
+pub trait Delete: DatabaseTable + Sized {
     async fn delete(rm: &RepositoryManager, id: i64) -> Result<()> {
         delete::<Self, _>(id, rm.pool()).await
     }
@@ -132,7 +131,7 @@ pub trait Delete: Crud + Sized {
 
 pub async fn delete<'c, R, E>(id: i64, executor: E) -> Result<()>
 where
-    R: Crud,
+    R: DatabaseTable,
     E: Executor<'c, Database = Postgres> + Send,
 {
     let mut query_builder =

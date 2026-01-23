@@ -14,7 +14,7 @@ use sqlx::{PgPool, QueryBuilder};
 /// Transaction repository for database operations
 pub struct TransactionRepository;
 
-impl crud::Crud for TransactionRepository {
+impl crud::DatabaseTable for TransactionRepository {
     const TABLE: &'static str = "transaction";
 }
 
