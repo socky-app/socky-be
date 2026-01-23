@@ -91,28 +91,22 @@ impl TransactionRepository {
         Ok((transactions, total))
     }
 
-    /// Get transaction by ID
-    pub async fn get(rm: RepositoryManager, id: i64) -> Result<TransactionEntity> {
-        crud::get::<Self, _, _>(id, rm.pool()).await
-    }
-
-    /// Create new transaction
-    pub async fn create(rm: RepositoryManager, dto: &CreateTransactionDto) -> Result<i64> {
-        crud::create::<Self, _, _>(dto, rm.pool()).await
-    }
-
-    /// Update existing transaction
-    pub async fn update(rm: RepositoryManager, id: i64, dto: &UpdateTransactionDto) -> Result<i64> {
-        crud::update::<Self, _, _>(id, dto, rm.pool()).await
-    }
-
-    /// Delete transaction
-    pub async fn delete(rm: RepositoryManager, id: i64) -> Result<()> {
-        crud::delete::<Self, _>(id, rm.pool()).await
-    }
-
     // TODO: soft delete
 }
+
+impl crud::Create for TransactionRepository {
+    type D = CreateTransactionDto;
+}
+
+impl crud::Get for TransactionRepository {
+    type T = TransactionEntity;
+}
+
+impl crud::Update for TransactionRepository {
+    type D = UpdateTransactionDto;
+}
+
+impl crud::Delete for TransactionRepository {}
 
 impl crud::Insertable for CreateTransactionDto {
     fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, sqlx::Postgres>) {

@@ -1,4 +1,4 @@
-use crate::repository::{Error, Result};
+use crate::repository::{Error, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
@@ -17,6 +17,14 @@ pub trait Updatable {
     /// Push SET clause fragments for UPDATE (no leading "SET").
     /// Example: b.push("col = ").push_bind(&self.col).push(", ");
     fn push_update<'r>(&'r self, b: &mut QueryBuilder<'r, Postgres>);
+}
+
+pub trait Create: Crud + Sized {
+    type D: Insertable + ?Sized;
+
+    async fn create(rm: &RepositoryManager, dto: &Self::D) -> Result<i64> {
+        create::<Self, _, _>(dto, rm.pool()).await
+    }
 }
 
 pub async fn create<'c, R, D, E>(dto: &D, executor: E) -> Result<i64>
@@ -39,6 +47,14 @@ where
         })?;
 
     Ok(id)
+}
+
+pub trait Get: Crud + Sized {
+    type T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin;
+
+    async fn get(rm: &RepositoryManager, id: i64) -> Result<Self::T> {
+        get::<Self, _, _>(id, rm.pool()).await
+    }
 }
 
 pub async fn get<'c, R, T, E>(id: i64, executor: E) -> Result<T>
@@ -66,6 +82,14 @@ where
             entity: R::TABLE,
             id,
         })
+    }
+}
+
+pub trait Update: Crud + Sized {
+    type D: Updatable;
+
+    async fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> Result<i64> {
+        update::<Self, _, _>(id, dto, rm.pool()).await
     }
 }
 
@@ -97,6 +121,12 @@ where
             entity: R::TABLE,
             id,
         })
+    }
+}
+
+pub trait Delete: Crud + Sized {
+    async fn delete(rm: &RepositoryManager, id: i64) -> Result<()> {
+        delete::<Self, _>(id, rm.pool()).await
     }
 }
 
