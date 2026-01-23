@@ -1,0 +1,42 @@
+use crate::repository::ops::DatabaseTable;
+use crate::repository::{Error, RepositoryManager, Result};
+use sqlx::postgres::Postgres;
+use sqlx::{Executor, QueryBuilder};
+
+use std::fmt::Debug;
+
+pub trait Get: DatabaseTable + Sized {
+    type T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin;
+
+    async fn get(rm: &RepositoryManager, id: i64) -> Result<Self::T> {
+        get::<Self, _, _>(id, rm.pool()).await
+    }
+}
+
+pub async fn get<'c, R, T, E>(id: i64, executor: E) -> Result<T>
+where
+    R: DatabaseTable,
+    T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
+    E: Executor<'c, Database = Postgres> + Send,
+{
+    let mut query_builder =
+        QueryBuilder::<Postgres>::new(&format!("SELECT * FROM {} WHERE id = ", R::TABLE));
+    query_builder.push_bind(id);
+
+    let ret_option = query_builder
+        .build_query_as::<T>()
+        .fetch_optional(executor)
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Database error getting {}: {:?}", R::TABLE, e);
+        })?;
+
+    if let Some(entity) = ret_option {
+        Ok(entity)
+    } else {
+        Err(Error::NotFound {
+            entity: R::TABLE,
+            id,
+        })
+    }
+}

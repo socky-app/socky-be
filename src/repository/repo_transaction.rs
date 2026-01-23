@@ -3,9 +3,7 @@ use crate::{
         CreateTransactionDto, TransactionEntity, TransactionQueryDto, UpdateTransactionDto,
     },
     repository::{
-        crud,
-        helper::{commit_db_transaction, start_db_transaction},
-        Error, RepositoryManager, Result,
+        Error, RepositoryManager, Result, helper::{commit_db_transaction, start_db_transaction}, ops::{self, create, delete, get, update}
     },
 };
 use chrono::Utc;
@@ -14,7 +12,7 @@ use sqlx::{PgPool, QueryBuilder};
 /// Transaction repository for database operations
 pub struct TransactionRepository;
 
-impl crud::DatabaseTable for TransactionRepository {
+impl ops::DatabaseTable for TransactionRepository {
     const TABLE: &'static str = "transaction";
 }
 
@@ -94,21 +92,21 @@ impl TransactionRepository {
     // TODO: soft delete
 }
 
-impl crud::Create for TransactionRepository {
+impl create::Create for TransactionRepository {
     type D = CreateTransactionDto;
 }
 
-impl crud::Get for TransactionRepository {
+impl get::Get for TransactionRepository {
     type T = TransactionEntity;
 }
 
-impl crud::Update for TransactionRepository {
+impl update::Update for TransactionRepository {
     type D = UpdateTransactionDto;
 }
 
-impl crud::Delete for TransactionRepository {}
+impl delete::Delete for TransactionRepository {}
 
-impl crud::Insertable for CreateTransactionDto {
+impl create::Insertable for CreateTransactionDto {
     fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, sqlx::Postgres>) {
         query_builder
             .push("(cid, title, amount, currency) VALUES (")
@@ -123,7 +121,7 @@ impl crud::Insertable for CreateTransactionDto {
     }
 }
 
-impl crud::Updatable for UpdateTransactionDto {
+impl update::Updatable for UpdateTransactionDto {
     fn push_update<'q>(&'q self, b: &mut QueryBuilder<'q, sqlx::Postgres>) {
         let mut first = true;
 

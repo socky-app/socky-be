@@ -1,0 +1,51 @@
+use crate::repository::ops::DatabaseTable;
+use crate::repository::{Error, RepositoryManager, Result};
+use sqlx::postgres::Postgres;
+use sqlx::{Executor, QueryBuilder};
+
+use std::fmt::Debug;
+
+pub trait Updatable {
+    /// Push SET clause fragments for UPDATE (no leading "SET").
+    /// Example: b.push("col = ").push_bind(&self.col).push(", ");
+    fn push_update<'r>(&'r self, b: &mut QueryBuilder<'r, Postgres>);
+}
+
+pub trait Update: DatabaseTable + Sized {
+    type D: Updatable;
+
+    async fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> Result<i64> {
+        update::<Self, _, _>(id, dto, rm.pool()).await
+    }
+}
+
+pub async fn update<'c, R, D, E>(id: i64, dto: &D, executor: E) -> Result<i64>
+where
+    R: DatabaseTable,
+    D: Updatable,
+    E: Executor<'c, Database = sqlx::Postgres>,
+{
+    let mut query_builder = QueryBuilder::<Postgres>::new(&format!("UPDATE {} SET ", R::TABLE));
+    dto.push_update(&mut query_builder);
+    query_builder
+        .push(" WHERE id = ")
+        .push_bind(id)
+        .push(" RETURNING id");
+
+    let ret_option = query_builder
+        .build_query_scalar::<i64>()
+        .fetch_optional(executor)
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Database error updating {}: {:?}", R::TABLE, e);
+        })?;
+
+    if let Some(ret_id) = ret_option {
+        Ok(ret_id)
+    } else {
+        Err(Error::NotFound {
+            entity: R::TABLE,
+            id,
+        })
+    }
+}
