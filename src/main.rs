@@ -30,6 +30,7 @@ mod error;
 mod log;
 mod model;
 mod web;
+mod common;
 
 /// Entrypoint for the backend service
 #[tokio::main]
