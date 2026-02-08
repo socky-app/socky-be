@@ -38,18 +38,18 @@ pub struct LoginVo {
     /// JWT token for authenticating subsequent requests
     pub token: String,
     /// User information
-    pub user_info: UserLoginVo,
+    pub user_info: LoggedUserInfoVo,
 }
 
 /// Comprehensive user information for authenticated sessions.
 #[derive(Debug, Default, Serialize, Clone)]
-pub struct UserLoginVo {
+pub struct LoggedUserInfoVo {
     /// Unique identifier of the user
     pub id: i64,
     /// Username of the user
     pub username: String,
     /// Email of the user
-    pub email: Option<String>,
+    pub email: String,
     // /// List of permission codes the user has access to
     // pub permissions: Vec<String>,
 }

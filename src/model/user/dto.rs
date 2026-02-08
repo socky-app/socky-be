@@ -12,7 +12,7 @@ pub struct CreateUserDto {
 
 /// Request payload for user authentication.
 #[derive(Deserialize)]
-pub struct LoginRequest {
+pub struct LoginRequestDto {
     /// Username or email for authentication
     pub username: String,
     /// User's password in plain text

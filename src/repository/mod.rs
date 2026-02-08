@@ -5,9 +5,10 @@ use sqlx::PgPool;
 use crate::repository::db::{create_pool, create_pool_from_config, test_connection};
 
 mod db;
-pub mod error;
 mod helper;
-mod ops;
+
+pub mod error;
+pub mod ops;
 pub mod repo_transaction;
 pub mod repo_user;
 
