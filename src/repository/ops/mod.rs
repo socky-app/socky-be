@@ -1,4 +1,4 @@
-use crate::repository::{Error, RepositoryManager, Result};
+use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 

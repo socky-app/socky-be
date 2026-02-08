@@ -5,14 +5,16 @@ use sqlx::PgPool;
 use crate::repository::db::{create_pool, create_pool_from_config, test_connection};
 
 mod db;
-mod ops;
-mod helper;
 pub mod error;
+mod helper;
+mod ops;
 pub mod repo_transaction;
 pub mod repo_user;
 
-pub use error::{Error, Result};
 pub use db::DatabaseConfig;
+pub use error::RepositoryError;
+
+pub(in crate::repository) type Result<T> = core::result::Result<T, RepositoryError>;
 
 #[derive(Clone)]
 pub struct RepositoryManager {
@@ -47,7 +49,6 @@ impl RepositoryManager {
     }
 
     pub(in crate::repository) fn pool(&self) -> &PgPool {
-		&self.pool
-	}
+        &self.pool
+    }
 }
-

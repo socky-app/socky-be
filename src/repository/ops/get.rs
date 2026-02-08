@@ -1,5 +1,5 @@
 use crate::repository::ops::DatabaseTable;
-use crate::repository::{Error, RepositoryManager, Result};
+use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
@@ -34,7 +34,7 @@ where
     if let Some(entity) = ret_option {
         Ok(entity)
     } else {
-        Err(Error::NotFound {
+        Err(RepositoryError::NotFound {
             entity: R::TABLE,
             id,
         })

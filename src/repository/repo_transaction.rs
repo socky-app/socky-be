@@ -3,7 +3,9 @@ use crate::{
         CreateTransactionDto, TransactionEntity, TransactionQueryDto, UpdateTransactionDto,
     },
     repository::{
-        Error, RepositoryManager, Result, helper::{commit_db_transaction, start_db_transaction}, ops::{self, create, delete, get, update}
+        helper::{commit_db_transaction, start_db_transaction},
+        ops::{self, create, delete, get, update},
+        RepositoryError, RepositoryManager, Result,
     },
 };
 use chrono::Utc;
@@ -34,7 +36,10 @@ impl TransactionRepository {
     }
 
     /// Count transactions matching filters
-    async fn count_transactions(rm: RepositoryManager, query: &TransactionQueryDto) -> Result<i64> {
+    async fn count_transactions(
+        rm: RepositoryManager,
+        query: &TransactionQueryDto,
+    ) -> Result<i64> {
         let mut query_builder: QueryBuilder<'_, sqlx::Postgres> =
             QueryBuilder::new("SELECT COUNT(*) FROM transaction WHERE 1=1");
 

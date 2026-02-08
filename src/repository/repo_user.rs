@@ -3,10 +3,12 @@ use sqlx::QueryBuilder;
 
 use crate::{
     model::user::{
-        LoginCredentialsEntity, UserEntity, dto::{CreateUserDto, UpdateUserDto, UpdateUserPasswordDto}
+        dto::{CreateUserDto, UpdateUserDto, UpdateUserPasswordDto},
+        LoginCredentialsEntity, UserEntity,
     },
     repository::{
-        Error, RepositoryManager, Result, ops::{self, DatabaseTable, create, delete, get, soft_delete, update}
+        ops::{self, create, delete, get, soft_delete, update, DatabaseTable},
+        RepositoryError, RepositoryManager, Result,
     },
 };
 
@@ -83,7 +85,11 @@ impl UserRepository {
             .execute(rm.pool())
             .await
             .inspect_err(|e| {
-                tracing::error!("Database error in update_last_login, user_id={}: {:?}", id, e);
+                tracing::error!(
+                    "Database error in update_last_login, user_id={}: {:?}",
+                    id,
+                    e
+                );
             })?;
 
         Ok(())
