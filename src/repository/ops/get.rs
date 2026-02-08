@@ -19,9 +19,8 @@ where
     T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
     E: Executor<'c, Database = Postgres> + Send,
 {
-    let mut query_builder =
-        QueryBuilder::<Postgres>::new(&format!("SELECT * FROM {} WHERE id = ", R::TABLE));
-    query_builder.push_bind(id);
+    let mut query_builder = QueryBuilder::<Postgres>::new(&format!("SELECT * FROM {} ", R::TABLE));
+    R::push_where(id, &mut query_builder);
 
     let ret_option = query_builder
         .build_query_as::<T>()

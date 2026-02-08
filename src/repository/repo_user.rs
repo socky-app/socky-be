@@ -7,7 +7,10 @@ use crate::{
         LoginCredentialsEntity, UserEntity,
     },
     repository::{
-        ops::{self, create, delete, get, soft_delete, update, DatabaseTable},
+        ops::{
+            self, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
+            DatabaseTable,
+        },
         RepositoryError, RepositoryManager, Result,
     },
 };
@@ -17,6 +20,7 @@ pub struct UserRepository;
 
 impl DatabaseTable for UserRepository {
     const TABLE: &'static str = "user";
+    type DeleteStrategy = SoftDeleteStrategy;
 }
 
 impl create::Create for UserRepository {

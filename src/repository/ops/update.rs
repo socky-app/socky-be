@@ -27,10 +27,9 @@ where
 {
     let mut query_builder = QueryBuilder::<Postgres>::new(&format!("UPDATE {} SET ", R::TABLE));
     dto.push_update(&mut query_builder);
-    query_builder
-        .push(" WHERE id = ")
-        .push_bind(id)
-        .push(" RETURNING id");
+    query_builder.push(" ");
+    R::push_where(id, &mut query_builder);
+    query_builder.push(" RETURNING id");
 
     let ret_option = query_builder
         .build_query_scalar::<i64>()

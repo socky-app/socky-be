@@ -4,7 +4,9 @@ use crate::{
     },
     repository::{
         helper::{commit_db_transaction, start_db_transaction},
-        ops::{self, create, delete, get, update},
+        ops::{
+            self, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
+        },
         RepositoryError, RepositoryManager, Result,
     },
 };
@@ -16,6 +18,7 @@ pub struct TransactionRepository;
 
 impl ops::DatabaseTable for TransactionRepository {
     const TABLE: &'static str = "transaction";
+    type DeleteStrategy = SoftDeleteStrategy;
 }
 
 impl TransactionRepository {
@@ -36,10 +39,7 @@ impl TransactionRepository {
     }
 
     /// Count transactions matching filters
-    async fn count_transactions(
-        rm: RepositoryManager,
-        query: &TransactionQueryDto,
-    ) -> Result<i64> {
+    async fn count_transactions(rm: RepositoryManager, query: &TransactionQueryDto) -> Result<i64> {
         let mut query_builder: QueryBuilder<'_, sqlx::Postgres> =
             QueryBuilder::new("SELECT COUNT(*) FROM transaction WHERE 1=1");
 
@@ -93,8 +93,6 @@ impl TransactionRepository {
 
         Ok((transactions, total))
     }
-
-    // TODO: soft delete
 }
 
 impl create::Create for TransactionRepository {
@@ -110,6 +108,8 @@ impl update::Update for TransactionRepository {
 }
 
 impl delete::Delete for TransactionRepository {}
+
+impl soft_delete::SoftDelete for TransactionRepository {}
 
 impl create::Insertable for CreateTransactionDto {
     fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, sqlx::Postgres>) {
