@@ -20,11 +20,9 @@ use crate::{
 };
 
 pub use self::error::{Error, Result};
-pub use config::config;
 
 mod repository;
 mod service;
-mod config;
 mod ctx;
 mod error;
 mod log;
