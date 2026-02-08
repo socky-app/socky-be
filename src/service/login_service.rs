@@ -8,7 +8,7 @@ use crate::{
         vo::{LoggedUserInfoVo, LoginVo},
         LoginCredentialsEntity, UserEntity, UserStatus,
     },
-    repository::{ops::get::Get, repo_user::UserRepository, RepositoryError, RepositoryManager},
+    repository::{ops::get::Get, user_repo::UserRepository, RepositoryError, RepositoryManager},
 };
 
 #[derive(Debug, Error)]

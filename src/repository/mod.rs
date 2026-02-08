@@ -9,8 +9,8 @@ mod helper;
 
 pub mod error;
 pub mod ops;
-pub mod repo_transaction;
-pub mod repo_user;
+pub mod transaction_repo;
+pub mod user_repo;
 
 pub use db::DatabaseConfig;
 pub use error::RepositoryError;
