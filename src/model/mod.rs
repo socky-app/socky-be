@@ -1,5 +1,5 @@
 //! Model layer
 
-pub mod user;
-pub mod transaction;
 pub mod money;
+pub mod transaction;
+pub mod user;

@@ -1,5 +1,5 @@
-use figment::Figment;
 use figment::providers::{Env, Serialized};
+use figment::Figment;
 use serde::{Deserialize, Serialize};
 
 use std::sync::OnceLock;
@@ -9,10 +9,10 @@ pub fn config() -> &'static Config {
 
     INSTANCE.get_or_init(|| {
         let config: Config = Figment::new()
-        .merge(Serialized::defaults(Config::default()))
-        .merge(Env::prefixed("SOCKY_"))
-        .extract()
-        .expect("Failed to load configuration");
+            .merge(Serialized::defaults(Config::default()))
+            .merge(Env::prefixed("SOCKY_"))
+            .extract()
+            .expect("Failed to load configuration");
 
         tracing::info!("CONFIG: {:?}", config);
         config
@@ -41,7 +41,6 @@ pub struct Config {
     /// web folder path
     pub web_folder: String,
 }
-
 
 impl Default for Config {
     fn default() -> Self {

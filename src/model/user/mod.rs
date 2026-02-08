@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use crate::model::user::error::UserError;
 
 pub mod dto;
-pub mod vo;
 pub mod error;
+pub mod vo;
 
 /// User definition.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

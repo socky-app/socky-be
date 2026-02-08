@@ -9,5 +9,5 @@ pub enum UserError {
     #[error("User is pending")]
     UserIsPending,
     #[error("User is locked")]
-    UserIsLocked
+    UserIsLocked,
 }

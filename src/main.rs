@@ -21,14 +21,14 @@ use crate::{
 
 pub use self::error::{Error, Result};
 
-mod repository;
-mod service;
+mod common;
 mod ctx;
 mod error;
 mod log;
 mod model;
+mod repository;
+mod service;
 mod web;
-mod common;
 
 /// Entrypoint for the backend service
 #[tokio::main]
