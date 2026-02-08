@@ -9,6 +9,7 @@ mod ops;
 mod helper;
 pub mod error;
 pub mod repo_transaction;
+pub mod repo_user;
 
 pub use error::{Error, Result};
 pub use db::DatabaseConfig;
