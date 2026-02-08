@@ -23,7 +23,7 @@ serde_with = "3.7.0"
 rust_decimal = "1.39.0"
 
 # Repository
-sqlx = { version = "0.8.6", features = [ "runtime-tokio-rustls", "postgres", "uuid", "time", "rust_decimal" ] }
+sqlx = { version = "0.8.6", features = [ "runtime-tokio-rustls", "postgres", "uuid", "chrono", "rust_decimal" ] }
 
 # Tracing
 tracing = "0.1.44"
@@ -35,7 +35,8 @@ strum_macros = "0.27.2"
 uuid = { version = "1.19.0", features = ["v4","fast-rng"] }
 thiserror = "2.0.18"
 figment = { version = "0.10.19", features = ["env"] }
-chrono = "0.4.43"
+chrono = { version = "0.4.43", features = ["serde"] }
+argon2 = "0.5.3"
 
 [dev-dependencies]
 anyhow = "1.0.81"
