@@ -10,6 +10,7 @@ mod helper;
 pub mod error;
 pub mod ops;
 pub mod transaction_repo;
+pub mod token_repo;
 pub mod user_repo;
 
 pub use db::DatabaseConfig;
