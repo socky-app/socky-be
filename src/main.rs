@@ -33,8 +33,10 @@ mod web;
 /// Entrypoint for the backend service
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
-        .without_time() // For early local development.
+        .without_time() // TODO: For early local development.
         .with_target(false)
         .with_env_filter(EnvFilter::from_default_env())
         .init();

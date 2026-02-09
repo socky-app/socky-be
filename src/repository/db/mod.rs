@@ -37,8 +37,8 @@ impl Default for DatabaseConfig {
             url: config().db_url.to_string(),
             max_connections: config().db_max_conn,
             min_connections: config().db_min_conn,
-            connect_timeout: Duration::from_secs(config().db_conn_timeout),
-            idle_timeout: Duration::from_secs(config().db_idle_timeout),
+            connect_timeout: Duration::from_secs(config().db_conn_timeout_seconds),
+            idle_timeout: Duration::from_secs(config().db_idle_timeout_seconds),
         }
     }
 }

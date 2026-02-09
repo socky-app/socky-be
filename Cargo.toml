@@ -30,13 +30,19 @@ sqlx = { version = "0.8.6", features = [ "runtime-tokio-rustls", "postgres", "uu
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
+# Crypto and auth
+argon2 = "0.5.3"
+jsonwebtoken = "10.3.0"
+
+# Configuration
+dotenvy = "0.15.7"
+figment = { version = "0.10.19", features = ["env"] }
+
 # Others
+chrono = { version = "0.4.43", features = ["serde"] }
+thiserror = "2.0.18"
 lazy-regex = "3.5.1"
 strum_macros = "0.27.2"
-thiserror = "2.0.18"
-figment = { version = "0.10.19", features = ["env"] }
-chrono = { version = "0.4.43", features = ["serde"] }
-argon2 = "0.5.3"
 
 [dev-dependencies]
 anyhow = "1.0.81"
