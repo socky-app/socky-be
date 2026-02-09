@@ -33,8 +33,10 @@ mod web;
 /// Entrypoint for the backend service
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load env
     dotenvy::dotenv().ok();
 
+    // Initialize logger
     tracing_subscriber::fmt()
         .without_time() // TODO: For early local development.
         .with_target(false)
@@ -42,7 +44,7 @@ async fn main() -> Result<()> {
         .init();
 
     // Initialize RepositoryManager
-    let rm = RepositoryManager::new().await.unwrap(); // TODO: fix
+    let rm = RepositoryManager::new(&common::config().db).await.unwrap(); // TODO: fix
 
     let routes_api =
         routes_transaction::routes(rm.clone()).route_layer(middleware::from_fn(mw_require_auth));
