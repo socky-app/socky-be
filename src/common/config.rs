@@ -2,7 +2,7 @@ use figment::providers::{Env, Serialized};
 use figment::Figment;
 use serde::{Deserialize, Serialize};
 
-use std::sync::OnceLock;
+use std::sync::Arc;
 
 const DEFAULT_APP_PORT: u16 = 8000;
 const DEFAULT_APP_HOST: &str = "0.0.0.0";
@@ -47,43 +47,47 @@ pub struct AuthConfig {
     pub refresh_token_pepper: String,
 }
 
-pub fn config() -> &'static Config {
-    static INSTANCE: OnceLock<Config> = OnceLock::new();
-
-    INSTANCE.get_or_init(|| {
-        Figment::new()
-            // --- App Defaults ---
-            .merge(Serialized::default("app.port", DEFAULT_APP_PORT))
-            .merge(Serialized::default("app.host", DEFAULT_APP_HOST))
-            .merge(Serialized::default("app.web_folder", DEFULAT_WEB_FOLDER))
-
-            // --- Database Defaults ---
-            .merge(Serialized::default("db.max_conn", DEFAULT_DB_MAX_CONN))
-            .merge(Serialized::default("db.min_conn", DEFAULT_DB_MIN_CONN))
-            .merge(Serialized::default("db.conn_timeout_seconds", DEFAULT_DB_CONN_TIMEOUT_S))
-            .merge(Serialized::default("db.idle_timeout_seconds", DEFAULT_DB_IDLE_TIMEOUT_S))
-
-            // --- Auth Defaults ---
-            .merge(Serialized::default("auth.access_token_expiration_seconds", DEFAULT_ACCESS_TOKEN_EXPIRATION_S))
-            .merge(Serialized::default("auth.refresh_token_expiration_seconds", DEFAULT_REFRESH_TOKEN_EXPIRATION_S))
-
-            // --- Environment Variables (With Nesting Support) ---
-            // split("__") tells Figment that SOCKY_DB__URL means db.url
-            .merge(Env::prefixed("SOCKY_").split("__"))
-
-            .extract::<Config>()
-            .unwrap_or_else(|error| {
-                print_config_error(error);
-                std::process::exit(1);
-            })
-    })
+pub fn load_config() -> Config {
+    Figment::new()
+        // --- App Defaults ---
+        .merge(Serialized::default("app.port", DEFAULT_APP_PORT))
+        .merge(Serialized::default("app.host", DEFAULT_APP_HOST))
+        .merge(Serialized::default("app.web_folder", DEFULAT_WEB_FOLDER))
+        // --- Database Defaults ---
+        .merge(Serialized::default("db.max_conn", DEFAULT_DB_MAX_CONN))
+        .merge(Serialized::default("db.min_conn", DEFAULT_DB_MIN_CONN))
+        .merge(Serialized::default(
+            "db.conn_timeout_seconds",
+            DEFAULT_DB_CONN_TIMEOUT_S,
+        ))
+        .merge(Serialized::default(
+            "db.idle_timeout_seconds",
+            DEFAULT_DB_IDLE_TIMEOUT_S,
+        ))
+        // --- Auth Defaults ---
+        .merge(Serialized::default(
+            "auth.access_token_expiration_seconds",
+            DEFAULT_ACCESS_TOKEN_EXPIRATION_S,
+        ))
+        .merge(Serialized::default(
+            "auth.refresh_token_expiration_seconds",
+            DEFAULT_REFRESH_TOKEN_EXPIRATION_S,
+        ))
+        // --- Environment Variables (With Nesting Support) ---
+        // split("__") tells Figment that SOCKY_DB__URL means db.url
+        .merge(Env::prefixed("SOCKY_").split("__"))
+        .extract::<Config>()
+        .unwrap_or_else(|error| {
+            print_config_error(error);
+            std::process::exit(1);
+        })
 }
 
 fn print_config_error(error: figment::Error) {
     eprintln!("====================================================");
     eprintln!("❌ CONFIGURATION ERROR");
     eprintln!("====================================================");
-    
+
     for (i, e) in error.into_iter().enumerate() {
         eprintln!("{}. Issue: {}", i + 1, e);
     }

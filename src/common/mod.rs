@@ -1,6 +1,5 @@
 pub mod config;
 pub mod password;
-
-pub use config::config;
+pub mod state;
 
 // TODO: Move config, error, ctx
