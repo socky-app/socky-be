@@ -2,15 +2,18 @@
 
 use sqlx::PgPool;
 
-use crate::{common::config::DbConfig, repository::db::{create_pool, test_connection}};
+use crate::{
+    common::config::DbConfig,
+    repository::db::{create_pool, test_connection},
+};
 
 mod db;
 mod helper;
 
 pub mod error;
 pub mod ops;
-pub mod transaction_repo;
 pub mod token_repo;
+pub mod transaction_repo;
 pub mod user_repo;
 
 pub use error::RepositoryError;
