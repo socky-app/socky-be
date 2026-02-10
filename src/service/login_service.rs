@@ -75,7 +75,7 @@ impl LoginService {
             });
         }
 
-        // 5. get user info
+        // 4. Get user info
         let user_info = Self::get_login_info(rm, credentials.id).await?;
 
         let total_time = start.elapsed();
@@ -86,7 +86,7 @@ impl LoginService {
             total_time
         );
 
-        // 6. return login vo
+        // 5. Return login VO
         Ok(LoginVo { token, user_info })
     }
 
