@@ -1,6 +1,7 @@
 use figment::providers::{Env, Serialized};
 use figment::Figment;
-use serde::{Deserialize, Serialize};
+use secrecy::SecretString;
+use serde::Deserialize;
 
 use std::sync::Arc;
 
@@ -14,21 +15,21 @@ const DEFAULT_ACCESS_TOKEN_EXPIRATION_S: i64 = 60 * 15; // 15 min
 const DEFAULT_REFRESH_TOKEN_EXPIRATION_S: i64 = 60 * 60 * 24 * 15; // 15 days
 const DEFULAT_WEB_FOLDER: &str = "web-folder";
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct Config {
     pub app: AppConfig,
     pub db: DbConfig,
     pub auth: AuthConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub port: u16,
     pub host: String,
     pub web_folder: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct DbConfig {
     pub url: String,
     pub max_conn: u32,
@@ -37,14 +38,14 @@ pub struct DbConfig {
     pub idle_timeout_seconds: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct AuthConfig {
-    pub password_pepper: String,
-    pub access_token_secret: String,
+    pub password_pepper: SecretString,
+    pub access_token_secret: SecretString,
     pub access_token_expiration_seconds: i64,
-    pub refresh_token_secret: String,
+    pub refresh_token_secret: SecretString,
     pub refresh_token_expiration_seconds: i64,
-    pub refresh_token_pepper: String,
+    pub refresh_token_pepper: SecretString,
 }
 
 pub fn load_config() -> Config {
