@@ -1,7 +1,8 @@
+use secrecy::{ExposeSecret, SecretString};
 use thiserror::Error;
 
 use crate::{
-    common::password::PasswordUtils,
+    common::{config::AuthConfig, password::PasswordUtils},
     model::user::{
         dto::LoginRequestDto,
         error::UserError,
@@ -32,21 +33,30 @@ pub struct LoginService;
 
 impl LoginService {
     // Login user.
-    pub async fn login(rm: RepositoryManager, request: LoginRequestDto) -> Result<LoginVo> {
+    pub async fn login(
+        rm: RepositoryManager,
+        request: LoginRequestDto,
+        auth_config: &AuthConfig,
+    ) -> Result<LoginVo> {
         let start = std::time::Instant::now();
         tracing::info!("Login attempt received for username: {}", request.username);
 
         // 1. Verify login credentials
-        let credentials = Self::verify_login(rm.clone(), &request.username, &request.password)
-            .await
-            .map_err(|e| {
-                tracing::warn!(
-                    "Login verification failed for username={}: {:?}",
-                    request.username,
-                    e
-                );
+        let credentials = Self::verify_login(
+            rm.clone(),
+            &request.username,
+            &request.password,
+            &auth_config.password_pepper,
+        )
+        .await
+        .map_err(|e| {
+            tracing::warn!(
+                "Login verification failed for username={}: {:?}",
+                request.username,
                 e
-            })?;
+            );
+            e
+        })?;
 
         let verification_time = start.elapsed();
         tracing::debug!(
@@ -96,6 +106,7 @@ impl LoginService {
         rm: RepositoryManager,
         username: &str,
         password: &str,
+        pepper: &SecretString,
     ) -> Result<LoginCredentialsEntity> {
         tracing::info!("Starting login verification for username: {}", username);
 
@@ -121,9 +132,10 @@ impl LoginService {
         let is_valid = {
             let pwd = password.to_string();
             let pwd_hash = user.password_hash.clone();
+            let pepper = pepper.clone();
 
             tokio::task::spawn_blocking(move || {
-                PasswordUtils::verify_password(&pwd, &pwd_hash)
+                PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
             .map_err(|e| LoginServiceError::InternalError)?
