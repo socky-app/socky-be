@@ -2,12 +2,9 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use hmac::{Hmac, Mac};
-use secrecy::{ExposeSecret, SecretString};
-use sha2::Sha512;
 use thiserror::Error;
 
-type HmacAlgorithm = Hmac<Sha512>;
+use crate::common::hmac::hash_sha512;
 
 #[derive(Debug, Error)]
 pub enum PasswordError {
@@ -37,7 +34,8 @@ impl PasswordUtils {
     /// * `Ok(String)` - The hashed password as a string
     /// * `Err(Error::PasswordHashingFailed)` - If hashing fails
     pub fn hash_password(password: &str, pepper: &str) -> Result<String, PasswordError> {
-        let peppered_password = Self::compute_peppered_password(password, pepper)?;
+        let peppered_password = hash_sha512(password.as_bytes(), pepper.as_bytes())
+            .map_err(|_| PasswordError::PasswordHashingFailed)?;
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let password_hash = argon2
@@ -67,7 +65,7 @@ impl PasswordUtils {
     /// * `true` - If the password matches the hash
     /// * `false` - If the password doesn't match or hash parsing fails
     pub fn verify_password(password: &str, hash: &str, pepper: &str) -> bool {
-        let peppered_password = match Self::compute_peppered_password(password, pepper) {
+        let peppered_password = match hash_sha512(password.as_bytes(), pepper.as_bytes()) {
             Ok(p) => p,
             Err(_) => return false,
         };
@@ -80,18 +78,6 @@ impl PasswordUtils {
         Argon2::default()
             .verify_password(&peppered_password, &parsed_hash)
             .is_ok()
-    }
-
-    fn compute_peppered_password(password: &str, pepper: &str) -> Result<Vec<u8>, PasswordError> {
-        let hmac = HmacAlgorithm::new_from_slice(pepper.as_bytes())
-                .map_err(|_| PasswordError::PasswordHashingFailed)?;
-
-        Ok(hmac
-            .chain_update(password.as_bytes())
-            .finalize()
-            .into_bytes()
-            .to_vec()
-        )
     }
 }
 
