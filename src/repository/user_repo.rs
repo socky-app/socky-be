@@ -42,7 +42,7 @@ impl soft_delete::SoftDelete for UserRepository {}
 /// Implement password update.
 impl UserRepository {
     pub async fn update_user_password(
-        rm: RepositoryManager,
+        rm: &RepositoryManager,
         id: i64,
         dto: &UpdateUserPasswordDto,
     ) -> Result<i64> {
@@ -53,12 +53,12 @@ impl UserRepository {
 /// Implement check existence by columns.
 impl UserRepository {
     /// Check if email exists
-    pub async fn email_exists(rm: RepositoryManager, email: &str) -> Result<bool> {
+    pub async fn email_exists(rm: &RepositoryManager, email: &str) -> Result<bool> {
         Self::exists_by_column(rm, "email", email).await
     }
 
     /// Check if username exists
-    pub async fn username_exists(rm: RepositoryManager, username: &str) -> Result<bool> {
+    pub async fn username_exists(rm: &RepositoryManager, username: &str) -> Result<bool> {
         Self::exists_by_column(rm, "username", username).await
     }
 }
@@ -67,7 +67,7 @@ impl UserRepository {
 impl UserRepository {
     /// Check user by username for authentication (only essential fields)
     pub async fn get_login_credentials(
-        rm: RepositoryManager,
+        rm: &RepositoryManager,
         username: &str,
     ) -> Result<Option<LoginCredentialsEntity>> {
         Ok(
@@ -82,7 +82,7 @@ impl UserRepository {
     }
 
     /// Update last login timestamp
-    pub async fn update_last_login(rm: RepositoryManager, id: i64) -> Result<()> {
+    pub async fn update_last_login(rm: &RepositoryManager, id: i64) -> Result<()> {
         sqlx::query("UPDATE users SET last_login_at = $1 WHERE id = $2")
             .bind(Utc::now().naive_utc())
             .bind(id)

@@ -34,7 +34,7 @@ pub struct LoginService;
 impl LoginService {
     // Login user.
     pub async fn login(
-        rm: RepositoryManager,
+        rm: &RepositoryManager,
         request: LoginRequestDto,
         auth_config: &AuthConfig,
     ) -> Result<LoginVo> {
@@ -43,7 +43,7 @@ impl LoginService {
 
         // 1. Verify login credentials
         let credentials = Self::verify_login(
-            rm.clone(),
+            &rm.clone(),
             &request.username,
             &request.password,
             &auth_config.password_pepper,
@@ -82,7 +82,7 @@ impl LoginService {
             let rm_clone = rm.clone();
             let user_id_clone = credentials.id;
             tokio::spawn(async move {
-                let _ = UserRepository::update_last_login(rm_clone, user_id_clone).await;
+                let _ = UserRepository::update_last_login(&rm_clone, user_id_clone).await;
             });
         }
 
@@ -103,7 +103,7 @@ impl LoginService {
 
     /// Verify login credentials.
     async fn verify_login(
-        rm: RepositoryManager,
+        rm: &RepositoryManager,
         username: &str,
         password: &str,
         pepper: &SecretString,
@@ -159,11 +159,11 @@ impl LoginService {
         Ok(user)
     }
 
-    async fn get_login_info(rm: RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
+    async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
         tracing::info!(user_id, "Starting to fetch comprehensive user info");
 
         // Get user basic info
-        let user: UserEntity = UserRepository::get(&rm, user_id).await?;
+        let user: UserEntity = UserRepository::get(rm, user_id).await?;
 
         tracing::debug!(
             "User basic info retrieved for user_id={}, username={}",

@@ -39,7 +39,7 @@ impl TransactionRepository {
     }
 
     /// Count transactions matching filters
-    async fn count_transactions(rm: RepositoryManager, query: &TransactionQueryDto) -> Result<i64> {
+    async fn count_transactions(rm: &RepositoryManager, query: &TransactionQueryDto) -> Result<i64> {
         let mut query_builder: QueryBuilder<'_, sqlx::Postgres> =
             QueryBuilder::new("SELECT COUNT(*) FROM transaction WHERE 1=1");
 
@@ -60,7 +60,7 @@ impl TransactionRepository {
 
     /// List transactions with pagination and filters
     pub async fn list_with_pagination(
-        rm: RepositoryManager,
+        rm: &RepositoryManager,
         offset: i64,
         limit: i64,
         query: TransactionQueryDto,
@@ -69,7 +69,7 @@ impl TransactionRepository {
             "Finding transactions with pagination and filters: {:?}",
             query
         );
-        let total = Self::count_transactions(rm.clone(), &query).await?;
+        let total = Self::count_transactions(&rm.clone(), &query).await?;
         if total == 0 {
             return Ok((Vec::new(), total));
         }

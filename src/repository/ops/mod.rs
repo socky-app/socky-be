@@ -27,7 +27,7 @@ pub trait DatabaseTable {
     }
 
     /// Generic check for existence based on a column and value
-    async fn exists_by_column(rm: RepositoryManager, column: &str, value: &str) -> Result<bool> {
+    async fn exists_by_column(rm: &RepositoryManager, column: &str, value: &str) -> Result<bool> {
         let sql = format!(
             "SELECT EXISTS(SELECT 1 FROM {} WHERE {} = $1 AND deleted_at IS NULL)",
             Self::TABLE,

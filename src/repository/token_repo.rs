@@ -33,7 +33,7 @@ impl Get for TokenRepository {
 impl Delete for TokenRepository {}
 
 impl TokenRepository {
-    pub async fn invalidate_token(rm: RepositoryManager, id: i64) -> Result<i64> {
+    pub async fn invalidate_token(rm: &RepositoryManager, id: i64) -> Result<i64> {
         let ret_option = sqlx::query_scalar::<_, i64>(&format!(
             "UPDATE {} SET is_revoked = $1, updated_at = $2 WHERE id = $3 RETURNING id",
             Self::TABLE
