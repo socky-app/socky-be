@@ -17,6 +17,7 @@ pub enum LoginServiceError {
     NotFoundCredentials,
     InvalidCredentials,
     InvalidUser(#[from] UserError),
+    InternalError,
 }
 
 type Result<T> = core::result::Result<T, LoginServiceError>;
@@ -115,7 +116,20 @@ impl LoginService {
         status.check_status()?;
 
         // 3. Verify password
-        if !PasswordUtils::verify_password(password, &user.password_hash) {
+        // Move to a spawn_blocking thread to release the executor threads from
+        // the expensive hashing operation.
+        let is_valid = {
+            let pwd = password.to_string();
+            let pwd_hash = user.password_hash.clone();
+
+            tokio::task::spawn_blocking(move || {
+                PasswordUtils::verify_password(&pwd, &pwd_hash)
+            })
+            .await
+            .map_err(|e| LoginServiceError::InternalError)?
+        };
+
+        if !is_valid {
             tracing::warn!(
                 "Invalid login attempt: password verification failed for username={}, user_id={}",
                 username,
