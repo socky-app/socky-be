@@ -10,7 +10,7 @@ type HmacSha512 = Hmac<Sha512>;
 // Internal Generic Helpers (Private)
 // -----------------------------------------------------------------------------
 
-fn hash_mac<M>(value: &[u8], secret: &[u8]) -> Result<Output<M>, InvalidLength>
+fn hash<M>(value: &[u8], secret: &[u8]) -> Result<Output<M>, InvalidLength>
 where
     M: Mac + KeyInit,
 {
@@ -19,7 +19,7 @@ where
     Ok(mac.finalize().into_bytes())
 }
 
-fn verify_mac<M>(value: &[u8], secret: &[u8], expected: &[u8]) -> bool
+fn verify<M>(value: &[u8], secret: &[u8], expected: &[u8]) -> bool
 where
     M: Mac + KeyInit,
 {
@@ -41,19 +41,19 @@ where
 // -----------------------------------------------------------------------------
 
 pub fn hash_sha256(value: &[u8], secret: &[u8]) -> Result<[u8; 32], InvalidLength> {
-    let result = hash_mac::<HmacSha256>(value, secret)?;
+    let result = hash::<HmacSha256>(value, secret)?;
     Ok(result.into())
 }
 
 pub fn verify_sha256(value: &[u8], secret: &[u8], expected: &[u8]) -> bool {
-    verify_mac::<HmacSha256>(value, secret, expected)
+    verify::<HmacSha256>(value, secret, expected)
 }
 
 pub fn hash_sha512(value: &[u8], secret: &[u8]) -> Result<[u8; 64], InvalidLength> {
-    let result = hash_mac::<HmacSha512>(value, secret)?;
+    let result = hash::<HmacSha512>(value, secret)?;
     Ok(result.into())
 }
 
 pub fn verify_sha512(value: &[u8], secret: &[u8], expected: &[u8]) -> bool {
-    verify_mac::<HmacSha512>(value, secret, expected)
+    verify::<HmacSha512>(value, secret, expected)
 }
