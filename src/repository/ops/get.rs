@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
@@ -7,8 +9,8 @@ use sqlx::{Executor, QueryBuilder};
 pub trait Get: DatabaseTable + Sized {
     type T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin;
 
-    async fn get(rm: &RepositoryManager, id: i64) -> Result<Self::T> {
-        get::<Self, _, _>(id, rm.pool()).await
+    fn get(rm: &RepositoryManager, id: i64) -> impl Future<Output = Result<Self::T>> + Send {
+        get::<Self, _, _>(id, rm.pool())
     }
 }
 

@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
@@ -11,10 +13,10 @@ pub trait Updatable {
 }
 
 pub trait Update: DatabaseTable + Sized {
-    type D: Updatable;
+    type D: Updatable + Sync;
 
-    async fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> Result<i64> {
-        update::<Self, _, _>(id, dto, rm.pool()).await
+    fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> impl Future<Output = Result<i64>> + Send {
+        update::<Self, _, _>(id, dto, rm.pool())
     }
 }
 

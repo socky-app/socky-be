@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::repository::ops::delete_strategy::SoftDeleteStrategy;
 use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryError, RepositoryManager, Result};
@@ -7,8 +9,8 @@ use sqlx::{Executor, QueryBuilder};
 
 
 pub trait SoftDelete: DatabaseTable<DeleteStrategy = SoftDeleteStrategy> + Sized {
-    async fn soft_delete(rm: &RepositoryManager, id: i64) -> Result<()> {
-        soft_delete::<Self, _>(id, rm.pool()).await
+    fn soft_delete(rm: &RepositoryManager, id: i64) -> impl Future<Output = Result<()>> + Send {
+        soft_delete::<Self, _>(id, rm.pool())
     }
 }
 

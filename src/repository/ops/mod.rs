@@ -1,6 +1,8 @@
+use std::future::Future;
+
 use crate::repository::ops::delete_strategy::Deletability;
 use crate::repository::{RepositoryManager, Result};
-use sqlx::{Executor, QueryBuilder};
+use sqlx::QueryBuilder;
 
 
 pub mod create;
@@ -25,7 +27,7 @@ pub trait DatabaseTable {
     }
 
     /// Generic check for existence based on a column and value
-    async fn exists_by_column(rm: &RepositoryManager, column: &str, value: &str) -> Result<bool> {
+    fn exists_by_column(rm: &RepositoryManager, column: &str, value: &str) -> impl Future<Output = Result<bool>> + Send {async move {
         let sql = format!(
             "SELECT EXISTS(SELECT 1 FROM {} WHERE {} = $1 AND deleted_at IS NULL)",
             Self::TABLE,
@@ -45,5 +47,5 @@ pub trait DatabaseTable {
             })?;
 
         Ok(exists)
-    }
+    }}
 }

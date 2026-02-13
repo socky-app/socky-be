@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryManager, Result};
 use sqlx::postgres::Postgres;
@@ -10,10 +12,10 @@ pub trait Insertable {
 }
 
 pub trait Create: DatabaseTable + Sized {
-    type D: Insertable + ?Sized;
+    type D: Insertable + Sync + ?Sized;
 
-    async fn create(rm: &RepositoryManager, dto: &Self::D) -> Result<i64> {
-        create::<Self, _, _>(dto, rm.pool()).await
+    fn create(rm: &RepositoryManager, dto: &Self::D) -> impl Future<Output = Result<i64>> + Send {
+        create::<Self, _, _>(dto, rm.pool())
     }
 }
 

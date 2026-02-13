@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
@@ -5,8 +7,8 @@ use sqlx::{Executor, QueryBuilder};
 
 
 pub trait Delete: DatabaseTable + Sized {
-    async fn delete(rm: &RepositoryManager, id: i64) -> Result<()> {
-        delete::<Self, _>(id, rm.pool()).await
+    fn delete(rm: &RepositoryManager, id: i64) -> impl Future<Output = Result<()>> + Send {
+        delete::<Self, _>(id, rm.pool())
     }
 }
 
