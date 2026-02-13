@@ -3,7 +3,6 @@ use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-use std::fmt::Debug;
 
 pub trait Updatable {
     /// Push SET clause fragments for UPDATE (no leading "SET").

@@ -3,7 +3,6 @@ use figment::Figment;
 use secrecy::SecretString;
 use serde::Deserialize;
 
-use std::sync::Arc;
 
 const DEFAULT_APP_PORT: u16 = 8000;
 const DEFAULT_APP_HOST: &str = "0.0.0.0";

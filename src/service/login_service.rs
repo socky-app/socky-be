@@ -138,7 +138,7 @@ impl LoginService {
                 PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
-            .map_err(|e| LoginServiceError::InternalError)?
+            .map_err(|_e| LoginServiceError::InternalError)?
         };
 
         if !is_valid {

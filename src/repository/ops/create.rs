@@ -3,7 +3,6 @@ use crate::repository::{RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-use std::fmt::Debug;
 
 pub trait Insertable {
     /// Push VALUES bindings for INSERT

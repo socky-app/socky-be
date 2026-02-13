@@ -6,7 +6,7 @@ use tracing::debug;
 
 use crate::ctx::Ctx;
 use crate::error::Result;
-use crate::model::transaction::{CreateTransactionDto, TransactionEntity, TransactionVo};
+use crate::model::transaction::{CreateTransactionDto, TransactionVo};
 use crate::repository::RepositoryManager;
 
 pub fn routes(mc: RepositoryManager) -> Router {
@@ -23,9 +23,9 @@ pub fn routes(mc: RepositoryManager) -> Router {
 }
 
 async fn create_transaction(
-    State(mc): State<RepositoryManager>,
-    ctx: Ctx,
-    Json(transaction_fc): Json<CreateTransactionDto>,
+    State(_mc): State<RepositoryManager>,
+    _ctx: Ctx,
+    Json(_transaction_fc): Json<CreateTransactionDto>,
 ) -> Result<Json<TransactionVo>> {
     debug!("{:<12} - create_transaction", "HANDLER");
 
@@ -33,8 +33,8 @@ async fn create_transaction(
 }
 
 async fn list_transactions(
-    State(mc): State<RepositoryManager>,
-    ctx: Ctx,
+    State(_mc): State<RepositoryManager>,
+    _ctx: Ctx,
 ) -> Result<Json<Vec<TransactionVo>>> {
     debug!("{:<12} - list_transactions", "HANDLER");
 
@@ -42,9 +42,9 @@ async fn list_transactions(
 }
 
 async fn delete_transaction(
-    State(mc): State<RepositoryManager>,
-    ctx: Ctx,
-    Path(id): Path<i64>,
+    State(_mc): State<RepositoryManager>,
+    _ctx: Ctx,
+    Path(_id): Path<i64>,
 ) -> Result<Json<()>> {
     debug!("{:<12} - delete_transaction", "HANDLER");
 
@@ -52,9 +52,9 @@ async fn delete_transaction(
 }
 
 async fn get_transaction(
-    State(mc): State<RepositoryManager>,
-    ctx: Ctx,
-    Path(id): Path<i64>,
+    State(_mc): State<RepositoryManager>,
+    _ctx: Ctx,
+    Path(_id): Path<i64>,
 ) -> Result<Json<TransactionVo>> {
     debug!("{:<12} - get_transaction", "HANDLER");
 

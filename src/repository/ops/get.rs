@@ -3,7 +3,6 @@ use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-use std::fmt::Debug;
 
 pub trait Get: DatabaseTable + Sized {
     type T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin;

@@ -3,9 +3,8 @@ use crate::repository::ops::DatabaseTable;
 use crate::repository::{RepositoryError, RepositoryManager, Result};
 use chrono::Utc;
 use sqlx::postgres::Postgres;
-use sqlx::{query, Executor, QueryBuilder};
+use sqlx::{Executor, QueryBuilder};
 
-use std::fmt::Debug;
 
 pub trait SoftDelete: DatabaseTable<DeleteStrategy = SoftDeleteStrategy> + Sized {
     async fn soft_delete(rm: &RepositoryManager, id: i64) -> Result<()> {

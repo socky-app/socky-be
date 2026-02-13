@@ -8,10 +8,9 @@ use crate::{
     },
     repository::{
         ops::{
-            self, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
+            create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
             DatabaseTable,
-        },
-        RepositoryError, RepositoryManager, Result,
+        }, RepositoryManager, Result,
     },
 };
 

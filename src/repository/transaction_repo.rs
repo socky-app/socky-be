@@ -3,15 +3,12 @@ use crate::{
         CreateTransactionDto, TransactionEntity, TransactionQueryDto, UpdateTransactionDto,
     },
     repository::{
-        helper::{commit_db_transaction, start_db_transaction},
         ops::{
             self, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
-        },
-        RepositoryError, RepositoryManager, Result,
+        }, RepositoryManager, Result,
     },
 };
-use chrono::Utc;
-use sqlx::{PgPool, QueryBuilder};
+use sqlx::QueryBuilder;
 
 /// Transaction repository for database operations
 pub struct TransactionRepository;
