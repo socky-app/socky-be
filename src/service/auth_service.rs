@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Debug, Error)]
-pub enum LoginServiceError {
+pub enum AuthServiceError {
     Repository(#[from] RepositoryError),
     NotFoundCredentials,
     InvalidCredentials,
@@ -21,17 +21,17 @@ pub enum LoginServiceError {
     InternalError,
 }
 
-type Result<T> = core::result::Result<T, LoginServiceError>;
+type Result<T> = core::result::Result<T, AuthServiceError>;
 
-impl core::fmt::Display for LoginServiceError {
+impl core::fmt::Display for AuthServiceError {
     fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
         write!(fmt, "{self:?}")
     }
 }
 
-pub struct LoginService;
+pub struct AuthService;
 
-impl LoginService {
+impl AuthService {
     // Login user.
     pub async fn login(
         rm: &RepositoryManager,
@@ -113,7 +113,7 @@ impl LoginService {
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, username)
             .await?
-            .ok_or(LoginServiceError::NotFoundCredentials)?;
+            .ok_or(AuthServiceError::NotFoundCredentials)?;
 
         tracing::debug!(
             "User found for username={}, user_id={}, status={}",
@@ -138,7 +138,7 @@ impl LoginService {
                 PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
-            .map_err(|_e| LoginServiceError::InternalError)?
+            .map_err(|_e| AuthServiceError::InternalError)?
         };
 
         if !is_valid {
@@ -147,7 +147,7 @@ impl LoginService {
                 username,
                 user.id
             );
-            return Err(LoginServiceError::InvalidCredentials);
+            return Err(AuthServiceError::InvalidCredentials);
         }
 
         tracing::info!(
