@@ -1,6 +1,4 @@
-//! Backend of the Socky application
-
-#![allow(unused)]
+//! Entrypoint for the the Socky backend.
 
 use std::net::SocketAddr;
 
@@ -10,9 +8,10 @@ use tower_cookies::CookieManagerLayer;
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
-use crate::{
+use socky_be::{
+    Result,
     common::{
-        config::{load_config, Config},
+        config::load_config,
         state::AppState,
     },
     repository::RepositoryManager,
@@ -22,17 +21,6 @@ use crate::{
         routes_login, routes_static, routes_transaction,
     },
 };
-
-pub use self::error::{Error, Result};
-
-mod common;
-mod ctx;
-mod error;
-mod log;
-mod model;
-mod repository;
-mod service;
-mod web;
 
 /// Entrypoint for the backend service
 #[tokio::main]
