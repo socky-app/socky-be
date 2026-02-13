@@ -2371,6 +2371,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "figment",
+ "hex",
  "hmac",
  "httpc-test",
  "jsonwebtoken",

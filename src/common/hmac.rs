@@ -89,3 +89,112 @@ where
     mac.update(value);
     mac.verify_slice(expected).is_ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hex;
+
+    // Note: You may want to add `hex = "0.4"` to your dev-dependencies 
+    // to easily compare byte arrays with standard hex strings.
+    // Use `cargo add --dev hex`
+
+    // --- SHA-256 Tests ---
+
+    #[test]
+    fn test_sha256_round_trip() {
+        let key = b"super-secret-key";
+        let msg = b"hello world";
+
+        // 1. Generate tag
+        let tag = hash_sha256(msg, key).expect("HMAC generation failed");
+
+        // 2. Verify successfully
+        assert!(verify_sha256(msg, key, &tag), "Verification should pass with correct key/msg");
+    }
+
+    #[test]
+    fn test_sha256_known_answer_rfc4231() {
+        // RFC 4231 Test Case 1
+        // Key: val 0x0b (20 bytes)
+        // Data: "Hi There"
+        let key = [0x0b; 20];
+        let msg = b"Hi There";
+        let expected_hex = "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7";
+
+        let tag = hash_sha256(msg, &key).unwrap();
+        
+        // Use hex crate if available, otherwise manual comparison
+        assert_eq!(hex::encode(tag), expected_hex);
+    }
+
+    #[test]
+    fn test_sha256_verification_failures() {
+        let key = b"secret";
+        let msg = b"data";
+        let tag = hash_sha256(msg, key).unwrap();
+
+        // 1. Test Wrong Message
+        assert!(!verify_sha256(b"data modified", key, &tag), "Should fail on modified message");
+
+        // 2. Test Wrong Key
+        assert!(!verify_sha256(msg, b"wrong secret", &tag), "Should fail on wrong key");
+
+        // 3. Test Corrupted Tag
+        let mut corrupted_tag = tag;
+        corrupted_tag[0] ^= 0xFF; // Flip bits in the first byte
+        assert!(!verify_sha256(msg, key, &corrupted_tag), "Should fail on corrupted tag");
+    }
+
+    // --- SHA-512 Tests ---
+
+    #[test]
+    fn test_sha512_round_trip() {
+        let key = b"another-secret";
+        let msg = b"secure message";
+        
+        let tag = hash_sha512(msg, key).expect("HMAC generation failed");
+        
+        // Check output size is correct (64 bytes for SHA-512)
+        assert_eq!(tag.len(), 64); 
+        assert!(verify_sha512(msg, key, &tag));
+    }
+
+    #[test]
+    fn test_sha512_known_answer_rfc4231() {
+        // RFC 4231 Test Case 1 for HMAC-SHA-512
+        let key = [0x0b; 20];
+        let msg = b"Hi There";
+        let expected_hex = "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854";
+
+        let tag = hash_sha512(msg, &key).unwrap();
+        assert_eq!(hex::encode(tag), expected_hex);
+    }
+
+    // --- Edge Case Tests ---
+
+    #[test]
+    fn test_empty_inputs() {
+        let key = b"key";
+        let empty_msg = b"";
+        
+        // Empty message is valid
+        let tag = hash_sha256(empty_msg, key).unwrap();
+        assert!(verify_sha256(empty_msg, key, &tag));
+
+        // Empty key (HMAC usually allows this, treating it as zero-padded or hashing it)
+        let empty_key = b"";
+        let tag2 = hash_sha256(b"msg", empty_key).unwrap();
+        assert!(verify_sha256(b"msg", empty_key, &tag2));
+    }
+
+    #[test]
+    fn test_key_handling() {
+         // HMAC keys can be longer than the block size (they get hashed down)
+         let long_key = [0u8; 1024]; 
+         let msg = b"test";
+         
+         let result = hash_sha256(msg, &long_key);
+         assert!(result.is_ok(), "Should accept long keys (HMAC standard behavior)");
+    }
+}
