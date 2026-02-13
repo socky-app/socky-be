@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::model::money::Money;
@@ -10,6 +11,8 @@ pub struct TransactionEntity {
     pub title: String,
     #[sqlx(flatten)]
     pub value: Money,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
 /// Transaction query parameters.

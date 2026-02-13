@@ -1,5 +1,3 @@
-use chrono::Utc;
-
 use crate::{
     model::refresh_token::{CreateRefreshTokenDto, RefreshTokenEntity},
     repository::{
@@ -35,11 +33,10 @@ impl Delete for TokenRepository {}
 impl TokenRepository {
     pub async fn invalidate_token(rm: &RepositoryManager, id: i64) -> Result<i64> {
         let ret_option = sqlx::query_scalar::<_, i64>(&format!(
-            "UPDATE {} SET is_revoked = $1, updated_at = $2 WHERE id = $3 RETURNING id",
+            "UPDATE {} SET is_revoked = $1 WHERE id = $2 RETURNING id",
             Self::TABLE
         ))
         .bind(true)
-        .bind(Utc::now().naive_utc())
         .bind(id)
         .fetch_optional(rm.pool())
         .await

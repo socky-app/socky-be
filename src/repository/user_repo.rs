@@ -117,15 +117,11 @@ impl create::Insertable for CreateUserDto {
 impl update::Updatable for UpdateUserDto {
     fn push_update<'q>(&'q self, b: &mut QueryBuilder<'q, sqlx::Postgres>) {
         b.push("email = ").push_bind(&self.email);
-        b.push(", ");
-        b.push("updated_at = ").push_bind(Utc::now());
     }
 }
 
 impl update::Updatable for UpdateUserPasswordDto {
     fn push_update<'r>(&'r self, b: &mut QueryBuilder<'r, sqlx::Postgres>) {
         b.push("password_hash = ").push_bind(&self.password);
-        b.push(", ");
-        b.push("updated_at = ").push_bind(Utc::now());
     }
 }

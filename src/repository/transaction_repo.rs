@@ -143,11 +143,6 @@ impl update::Updatable for UpdateTransactionDto {
             b.push("amount = ").push_bind(value.amount);
             b.push(", ");
             b.push("currency = ").push_bind(&value.currency);
-            first = false;
         }
-
-        // TODO: always update updated_at
-        // if !first { b.push(", "); }
-        // b.push("updated_at = ").push_bind(Utc::now());
     }
 }
