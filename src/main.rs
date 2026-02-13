@@ -9,17 +9,14 @@ use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use socky_be::{
-    Result,
-    common::{
-        config::load_config,
-        state::AppState,
-    },
+    common::{config::load_config, state::AppState},
     repository::RepositoryManager,
     web::{
         mw_auth::{mw_ctx_resolver, mw_require_auth},
         mw_res_map::mw_res_map,
         routes_login, routes_static, routes_transaction,
     },
+    Result,
 };
 
 /// Entrypoint for the backend service

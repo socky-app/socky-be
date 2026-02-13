@@ -10,7 +10,8 @@ use crate::{
         ops::{
             create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
             DatabaseTable,
-        }, RepositoryManager, Result,
+        },
+        RepositoryManager, Result,
     },
 };
 

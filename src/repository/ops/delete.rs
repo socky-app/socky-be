@@ -5,7 +5,6 @@ use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-
 pub trait Delete: DatabaseTable + Sized {
     fn delete(rm: &RepositoryManager, id: i64) -> impl Future<Output = Result<()>> + Send {
         delete::<Self, _>(id, rm.pool())

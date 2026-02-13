@@ -3,7 +3,6 @@ use figment::Figment;
 use secrecy::SecretString;
 use serde::Deserialize;
 
-
 const DEFAULT_APP_PORT: u16 = 8000;
 const DEFAULT_APP_HOST: &str = "0.0.0.0";
 const DEFAULT_DB_MAX_CONN: u32 = 10;

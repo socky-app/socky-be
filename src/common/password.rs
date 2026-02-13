@@ -20,8 +20,8 @@ impl PasswordUtils {
     ///
     /// This function generates a random salt and uses Argon2 with default parameters
     /// to create a secure hash of the provided password.
-    /// 
-    /// Consider calling this function using `spawn_blocking`, to avoid blocking an 
+    ///
+    /// Consider calling this function using `spawn_blocking`, to avoid blocking an
     /// executor thread with the hashing operation.
     ///
     /// # Arguments
@@ -50,8 +50,8 @@ impl PasswordUtils {
     ///
     /// This function parses the stored hash and verifies if the provided
     /// plain-text password matches the hash.
-    /// 
-    /// Consider calling this function using `spawn_blocking`, to avoid blocking an 
+    ///
+    /// Consider calling this function using `spawn_blocking`, to avoid blocking an
     /// executor thread with the hashing operation.
     ///
     /// # Arguments
@@ -98,10 +98,18 @@ mod tests {
         assert!(PasswordUtils::verify_password(password, &hash, pepper));
 
         // Test verification with incorrect password
-        assert!(!PasswordUtils::verify_password("wrong_password", &hash, pepper));
+        assert!(!PasswordUtils::verify_password(
+            "wrong_password",
+            &hash,
+            pepper
+        ));
 
         // Test verification with invalid hash
-        assert!(!PasswordUtils::verify_password(password, "invalid_hash", pepper));
+        assert!(!PasswordUtils::verify_password(
+            password,
+            "invalid_hash",
+            pepper
+        ));
     }
 
     #[test]

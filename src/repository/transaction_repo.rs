@@ -5,7 +5,8 @@ use crate::{
     repository::{
         ops::{
             self, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
-        }, RepositoryManager, Result,
+        },
+        RepositoryManager, Result,
     },
 };
 use sqlx::QueryBuilder;
@@ -36,7 +37,10 @@ impl TransactionRepository {
     }
 
     /// Count transactions matching filters
-    async fn count_transactions(rm: &RepositoryManager, query: &TransactionQueryDto) -> Result<i64> {
+    async fn count_transactions(
+        rm: &RepositoryManager,
+        query: &TransactionQueryDto,
+    ) -> Result<i64> {
         let mut query_builder: QueryBuilder<'_, sqlx::Postgres> =
             QueryBuilder::new("SELECT COUNT(*) FROM transaction WHERE 1=1");
 

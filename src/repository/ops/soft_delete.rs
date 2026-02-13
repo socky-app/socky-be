@@ -7,7 +7,6 @@ use chrono::Utc;
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-
 pub trait SoftDelete: DatabaseTable<DeleteStrategy = SoftDeleteStrategy> + Sized {
     fn soft_delete(rm: &RepositoryManager, id: i64) -> impl Future<Output = Result<()>> + Send {
         soft_delete::<Self, _>(id, rm.pool())

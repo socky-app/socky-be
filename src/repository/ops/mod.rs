@@ -4,7 +4,6 @@ use crate::repository::ops::delete_strategy::Deletability;
 use crate::repository::{RepositoryManager, Result};
 use sqlx::QueryBuilder;
 
-
 pub mod create;
 pub mod delete;
 pub mod delete_strategy;
@@ -27,25 +26,31 @@ pub trait DatabaseTable {
     }
 
     /// Generic check for existence based on a column and value
-    fn exists_by_column(rm: &RepositoryManager, column: &str, value: &str) -> impl Future<Output = Result<bool>> + Send {async move {
-        let sql = format!(
-            "SELECT EXISTS(SELECT 1 FROM {} WHERE {} = $1 AND deleted_at IS NULL)",
-            Self::TABLE,
-            column
-        );
+    fn exists_by_column(
+        rm: &RepositoryManager,
+        column: &str,
+        value: &str,
+    ) -> impl Future<Output = Result<bool>> + Send {
+        async move {
+            let sql = format!(
+                "SELECT EXISTS(SELECT 1 FROM {} WHERE {} = $1 AND deleted_at IS NULL)",
+                Self::TABLE,
+                column
+            );
 
-        let exists = sqlx::query_scalar::<_, bool>(&sql)
-            .bind(value)
-            .fetch_one(rm.pool())
-            .await
-            .inspect_err(|e| {
-                tracing::error!(
-                    "Database error checking existance on {}: {:?}",
-                    Self::TABLE,
-                    e
-                );
-            })?;
+            let exists = sqlx::query_scalar::<_, bool>(&sql)
+                .bind(value)
+                .fetch_one(rm.pool())
+                .await
+                .inspect_err(|e| {
+                    tracing::error!(
+                        "Database error checking existance on {}: {:?}",
+                        Self::TABLE,
+                        e
+                    );
+                })?;
 
-        Ok(exists)
-    }}
+            Ok(exists)
+        }
+    }
 }

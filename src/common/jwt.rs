@@ -95,7 +95,8 @@ pub fn generate_tokens_with_family_id(
         RefreshClaims::new(user_id, family_id, config.refresh_token_expiration_seconds);
 
     let access_token = generate_token(&access_claims, config.access_token_secret.expose_secret())?;
-    let refresh_token = generate_token(&refresh_claims, config.refresh_token_secret.expose_secret())?;
+    let refresh_token =
+        generate_token(&refresh_claims, config.refresh_token_secret.expose_secret())?;
 
     Ok((access_token, refresh_token))
 }

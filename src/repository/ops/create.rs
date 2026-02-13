@@ -5,7 +5,6 @@ use crate::repository::{RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-
 pub trait Insertable {
     /// Push VALUES bindings for INSERT
     fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, Postgres>);

@@ -1,5 +1,5 @@
-use hmac::{Hmac, Mac, digest::KeyInit};
-use hmac::digest::{Output, InvalidLength};
+use hmac::digest::{InvalidLength, Output};
+use hmac::{digest::KeyInit, Hmac, Mac};
 use sha2::{Sha256, Sha512};
 
 // Type Aliases for convenience
@@ -23,7 +23,7 @@ fn verify<M>(value: &[u8], secret: &[u8], expected: &[u8]) -> bool
 where
     M: Mac + KeyInit,
 {
-    // If the key is invalid, we return false (verification failed) 
+    // If the key is invalid, we return false (verification failed)
     // rather than panicking or bubbling the error.
     let mut mac = match <M as Mac>::new_from_slice(secret) {
         Ok(m) => m,
@@ -31,7 +31,7 @@ where
     };
 
     mac.update(value);
-    
+
     // verify_slice handles length checks and is constant-time
     mac.verify_slice(expected).is_ok()
 }

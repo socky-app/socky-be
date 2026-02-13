@@ -5,7 +5,6 @@ use crate::repository::{RepositoryError, RepositoryManager, Result};
 use sqlx::postgres::Postgres;
 use sqlx::{Executor, QueryBuilder};
 
-
 pub trait Updatable {
     /// Push SET clause fragments for UPDATE (no leading "SET").
     /// Example: b.push("col = ").push_bind(&self.col).push(", ");
@@ -15,7 +14,11 @@ pub trait Updatable {
 pub trait Update: DatabaseTable + Sized {
     type D: Updatable + Sync;
 
-    fn update(rm: &RepositoryManager, id: i64, dto: &Self::D) -> impl Future<Output = Result<i64>> + Send {
+    fn update(
+        rm: &RepositoryManager,
+        id: i64,
+        dto: &Self::D,
+    ) -> impl Future<Output = Result<i64>> + Send {
         update::<Self, _, _>(id, dto, rm.pool())
     }
 }
