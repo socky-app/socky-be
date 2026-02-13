@@ -61,6 +61,15 @@ impl TokenRepository {
 
 impl Insertable for CreateRefreshTokenDto {
     fn push_insert<'r>(&'r self, query_builder: &mut sqlx::QueryBuilder<'r, sqlx::Postgres>) {
-        todo!()
+        query_builder
+            .push("(user_id, family_id, token_hash, expires_at) VALUES (")
+            .push_bind(self.user_id)
+            .push(", ")
+            .push_bind(self.family_id)
+            .push(", ")
+            .push_bind(&self.token_hash)
+            .push(", ")
+            .push_bind(self.expires_at)
+            .push(")");
     }
 }

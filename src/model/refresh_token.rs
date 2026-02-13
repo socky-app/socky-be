@@ -18,8 +18,8 @@ pub struct RefreshTokenEntity {
 /// Token creation parameters.
 #[derive(Debug, Clone)]
 pub struct CreateRefreshTokenDto {
-    user_id: i64,
-    family_id: Uuid,
-    token_hash: String,
-    expires_at: NaiveDateTime,
+    pub user_id: i64,
+    pub family_id: Uuid,
+    pub token_hash: String,
+    pub expires_at: NaiveDateTime,
 }
