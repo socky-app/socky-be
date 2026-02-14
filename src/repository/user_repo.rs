@@ -65,7 +65,7 @@ impl UserRepository {
 
 /// Implement login and auth operations.
 impl UserRepository {
-    /// Check user by username for authentication (only essential fields)
+    /// Get user by username for authentication (only essential fields)
     pub async fn get_login_credentials(
         rm: &RepositoryManager,
         username: &str,

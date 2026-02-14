@@ -32,11 +32,13 @@ impl From<UserEntity> for UserVo {
     }
 }
 
-/// Response payload for successful user login.
+/// Response payload for autheticated user.
 #[derive(Debug, Default, Serialize)]
-pub struct LoginVo {
-    /// JWT token for authenticating subsequent requests
-    pub token: String,
+pub struct AuthResponseVo {
+    /// Token for authenticating subsequent requests
+    pub access_token: String,
+    /// Token for refreshing the user credentials
+    pub refresh_token: String,
     /// User information
     pub user_info: LoggedUserInfoVo,
 }

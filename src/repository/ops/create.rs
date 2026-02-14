@@ -21,7 +21,7 @@ pub trait Create: DatabaseTable + Sized {
 pub async fn create<'c, R, D, E>(dto: &D, executor: E) -> Result<i64>
 where
     R: DatabaseTable,
-    D: Insertable + ?Sized,
+    D: Insertable + Sync + ?Sized,
     E: Executor<'c, Database = Postgres> + Send,
 {
     let mut query_builder = QueryBuilder::<Postgres>::new(&format!("INSERT INTO {} ", R::TABLE));
