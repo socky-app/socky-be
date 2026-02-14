@@ -15,9 +15,11 @@
 //! assert!(hmac::verify_sha256(msg, secret, &tag));
 //! ```
 
-use hmac::digest::{InvalidLength, Output};
+use hmac::digest::Output;
 use hmac::{digest::KeyInit, Hmac, Mac};
 use sha2::{Sha256, Sha512};
+
+pub use hmac::digest::InvalidLength;
 
 /// Convenience alias for HMAC-SHA256 (`Hmac<Sha256>`).
 type HmacSha256 = Hmac<Sha256>;
