@@ -2,22 +2,27 @@ use secrecy::{ExposeSecret, SecretString};
 use thiserror::Error;
 
 use crate::{
-    common::{config::AuthConfig, password::PasswordUtils},
-    model::user::{
-        dto::LoginRequestDto,
-        error::UserError,
-        vo::{LoggedUserInfoVo, LoginVo},
-        LoginCredentialsEntity, UserEntity, UserStatus,
+    common::{
+        config::AuthConfig,
+        hmac,
+        password::PasswordUtils,
+        token::{self, TokenError},
     },
-    repository::{ops::get::Get, user_repo::UserRepository, RepositoryError, RepositoryManager},
+    model::{refresh_token::CreateRefreshTokenDto, user::{
+        LoginCredentialsEntity, UserEntity, UserStatus, dto::LoginRequestDto, error::UserError, vo::{AuthResponseVo, LoggedUserInfoVo}
+    }},
+    repository::{RepositoryError, RepositoryManager, ops::{create::Create, get::Get}, token_repo::TokenRepository, user_repo::UserRepository},
 };
 
 #[derive(Debug, Error)]
 pub enum AuthServiceError {
     Repository(#[from] RepositoryError),
-    NotFoundCredentials,
-    InvalidCredentials,
+    UserNotFound,
+    WrongPassword,
     InvalidUser(#[from] UserError),
+    InvalidRefreshToken,
+    ExpiredRefreshToken,
+    RevokedRefreshToken,
     InternalError,
 }
 
@@ -29,6 +34,25 @@ impl core::fmt::Display for AuthServiceError {
     }
 }
 
+impl From<TokenError> for AuthServiceError {
+    fn from(error: TokenError) -> Self {
+        match error {
+            // Direct mappings
+            TokenError::InvalidToken => AuthServiceError::InvalidRefreshToken,
+            TokenError::ExpiredToken => AuthServiceError::ExpiredRefreshToken,
+
+            // Map technical/unexpected errors to a generic InternalError
+            TokenError::TokenCreationFailed => AuthServiceError::InternalError,
+        }
+    }
+}
+
+impl From<hmac::InvalidLength> for AuthServiceError {
+    fn from(_: hmac::InvalidLength) -> Self {
+        AuthServiceError::InternalError
+    }
+}
+
 pub struct AuthService;
 
 impl AuthService {
@@ -37,7 +61,7 @@ impl AuthService {
         rm: &RepositoryManager,
         request: LoginRequestDto,
         auth_config: &AuthConfig,
-    ) -> Result<LoginVo> {
+    ) -> Result<AuthResponseVo> {
         let start = std::time::Instant::now();
         tracing::info!("Login attempt received for username: {}", request.username);
 
@@ -65,19 +89,36 @@ impl AuthService {
             credentials.id
         );
 
-        // TODO 2. Generate token
-        // let token = jwt::generate_token(user.id, &request.username).map_err(|e| {
-        //     tracing::error!("Failed to generate token for user_id={}: {:?}", user.id, e);
-        //     ServiceError::TokenCreationFailed
-        // })?;
-        let token = "my_jwt".to_string();
+        // 2. Generate token pair
+        let tokens = token::generate_tokens(credentials.id, auth_config)?;
+        let refresh_token_hash = hmac::hash_sha512(
+            tokens.refresh_token.as_bytes(),
+            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
+        )?;
 
         tracing::debug!(
-            "JWT token generated successfully for user_id={}",
+            "Tokens generated successfully for user_id={}",
             credentials.id
         );
 
-        // 3. Update last login time
+        // 3. Get user info
+        let user_info = Self::get_login_info(rm, credentials.id).await?;
+
+        tracing::debug!(
+            "User info retrieved successfully for user_id={}",
+            credentials.id
+        );
+
+        // 4. Store refresh token
+        let create_dto = CreateRefreshTokenDto {
+            user_id: credentials.id,
+            family_id: tokens.family_id,
+            token_hash: &refresh_token_hash,
+            expires_at: tokens.refresh_expires_at,
+        };
+        let _ = TokenRepository::create(rm, &create_dto).await?;
+
+        // 5. Update last login time (fire & forget)
         {
             let rm_clone = rm.clone();
             let user_id_clone = credentials.id;
@@ -85,9 +126,6 @@ impl AuthService {
                 let _ = UserRepository::update_last_login(&rm_clone, user_id_clone).await;
             });
         }
-
-        // 4. Get user info
-        let user_info = Self::get_login_info(rm, credentials.id).await?;
 
         let total_time = start.elapsed();
         tracing::info!(
@@ -97,8 +135,81 @@ impl AuthService {
             total_time
         );
 
-        // 5. Return login VO
-        Ok(LoginVo { token, user_info })
+        // 6. Return login VO
+        Ok(AuthResponseVo {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            user_info,
+        })
+    }
+
+    /// Refresh tokens.
+    pub async fn refresh(
+        rm: &RepositoryManager,
+        input_token: &str,
+        auth_config: &AuthConfig,
+    ) -> Result<AuthResponseVo> {
+        // 1. Hash incoming token
+        let input_token_hash = hmac::hash_sha512(
+            input_token.as_bytes(),
+            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
+        )?;
+
+        // 2. Fetch token record
+        // We need to know if it exists to check for reuse or expiration
+        let token_entity = TokenRepository::get_by_hash(rm, &input_token_hash).await?
+            .ok_or(AuthServiceError::InvalidRefreshToken)?;
+
+        // 3. Reuse Detection (Security Critical)
+        if token_entity.is_revoked {
+            tracing::error!("Token reuse detected! Revoking family: {}", token_entity.family_id);
+            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
+            // Return generic error to avoid leaking implementation details
+            return Err(AuthServiceError::RevokedRefreshToken); 
+        }
+
+        // 4. Check expiration
+        // We check against the DB record, not the JWT claim (Stateful check)
+        if token_entity.expires_at < chrono::Utc::now().naive_utc() {
+            return Err(AuthServiceError::ExpiredRefreshToken);
+        }
+
+        // 5. Generate new refresh token pair
+        // CRITICAL: We pass the EXISTING family_id to maintain the chain
+        let new_tokens = token::generate_tokens_with_family_id(
+            token_entity.user_id,
+            token_entity.family_id, 
+            auth_config
+        )?;
+
+        let new_token_hash = hmac::hash_sha512(
+            new_tokens.refresh_token.as_bytes(),
+            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
+        )?;
+
+        // 6. Get user info
+        let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
+
+        // 7. Rotate tokens in single DB transaction
+        let create_dto = CreateRefreshTokenDto {
+            user_id: token_entity.user_id,
+            family_id: token_entity.family_id,
+            token_hash: &new_token_hash,
+            expires_at: new_tokens.refresh_expires_at,
+        };
+
+        TokenRepository::rotate(
+            rm,
+            &create_dto,
+            token_entity.id, // Old token (to revoke)
+        ).await?;
+
+        // 8. Return new tokens
+        Ok(AuthResponseVo {
+            access_token: new_tokens.access_token,
+            refresh_token: new_tokens.refresh_token,
+            user_info,
+        })
     }
 
     /// Verify login credentials.
@@ -113,7 +224,7 @@ impl AuthService {
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, username)
             .await?
-            .ok_or(AuthServiceError::NotFoundCredentials)?;
+            .ok_or(AuthServiceError::UserNotFound)?;
 
         tracing::debug!(
             "User found for username={}, user_id={}, status={}",
@@ -128,7 +239,7 @@ impl AuthService {
 
         // 3. Verify password
         // Move to a spawn_blocking thread to release the executor threads from
-        // the expensive hashing operation.
+        // the expensive password hashing operation.
         let is_valid = {
             let pwd = password.to_string();
             let pwd_hash = user.password_hash.clone();
@@ -147,7 +258,7 @@ impl AuthService {
                 username,
                 user.id
             );
-            return Err(AuthServiceError::InvalidCredentials);
+            return Err(AuthServiceError::WrongPassword);
         }
 
         tracing::info!(
