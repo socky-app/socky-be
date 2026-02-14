@@ -21,7 +21,7 @@ impl DatabaseTable for TokenRepository {
 }
 
 impl Create for TokenRepository {
-    type D = CreateRefreshTokenDto;
+    type D<'a> = CreateRefreshTokenDto<'a>;
 }
 
 impl Get for TokenRepository {
@@ -59,7 +59,7 @@ impl TokenRepository {
     }
 }
 
-impl Insertable for CreateRefreshTokenDto {
+impl Insertable for CreateRefreshTokenDto<'_> {
     fn push_insert<'r>(&'r self, query_builder: &mut sqlx::QueryBuilder<'r, sqlx::Postgres>) {
         query_builder
             .push("(user_id, family_id, token_hash, expires_at) VALUES (")
@@ -67,7 +67,7 @@ impl Insertable for CreateRefreshTokenDto {
             .push(", ")
             .push_bind(self.family_id)
             .push(", ")
-            .push_bind(&self.token_hash)
+            .push_bind(self.token_hash)
             .push(", ")
             .push_bind(self.expires_at)
             .push(")");

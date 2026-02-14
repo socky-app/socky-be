@@ -97,7 +97,7 @@ impl TransactionRepository {
 }
 
 impl create::Create for TransactionRepository {
-    type D = CreateTransactionDto;
+    type D<'a> = CreateTransactionDto;
 }
 
 impl get::Get for TransactionRepository {

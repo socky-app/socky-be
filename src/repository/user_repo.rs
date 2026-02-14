@@ -24,7 +24,7 @@ impl DatabaseTable for UserRepository {
 }
 
 impl create::Create for UserRepository {
-    type D = CreateUserDto;
+    type D<'a> = CreateUserDto;
 }
 
 impl get::Get for UserRepository {

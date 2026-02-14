@@ -11,9 +11,9 @@ pub trait Insertable {
 }
 
 pub trait Create: DatabaseTable + Sized {
-    type D: Insertable + Sync + ?Sized;
+    type D<'a>: Insertable + Sync + ?Sized;
 
-    fn create(rm: &RepositoryManager, dto: &Self::D) -> impl Future<Output = Result<i64>> + Send {
+    fn create<'a>(rm: &RepositoryManager, dto: &Self::D<'a>) -> impl Future<Output = Result<i64>> + Send {
         create::<Self, _, _>(dto, rm.pool())
     }
 }
