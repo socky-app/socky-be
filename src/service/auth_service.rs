@@ -212,6 +212,33 @@ impl AuthService {
         })
     }
 
+    /// Logout user.
+    pub async fn logout(
+        rm: &RepositoryManager,
+        refresh_token: &str,
+        auth_config: &AuthConfig,
+    ) -> Result<()> {
+        tracing::info!("Logout attempt received");
+
+        // 1. Hash incoming token
+        let token_hash = hmac::hash_sha512(
+            refresh_token.as_bytes(),
+            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
+        )?;
+
+        // 2. Find the token to get its Family ID
+        // If it's already gone/invalid, we can just return Ok (idempotent)
+        if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
+           
+            // 3. Revoke the entire Family
+            tracing::info!("Revoking session family: {}", token_entity.family_id);
+            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
+        }
+
+        tracing::info!("Logout successful.");
+        Ok(())
+    }
+
     /// Verify login credentials.
     async fn verify_login(
         rm: &RepositoryManager,
