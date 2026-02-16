@@ -11,7 +11,7 @@ use crate::{
     model::{refresh_token::CreateRefreshTokenDto, user::{
         LoginCredentialsEntity, UserEntity, UserStatus, dto::LoginRequestDto, error::UserError, vo::{AuthResponseVo, LoggedUserInfoVo}
     }},
-    repository::{RepositoryError, RepositoryManager, ops::{create::Create, get::Get}, token_repo::TokenRepository, user_repo::UserRepository},
+    repository::{RepositoryError, RepositoryManager, Create, Get, token_repo::TokenRepository, user_repo::UserRepository},
 };
 
 #[derive(Debug, Error)]

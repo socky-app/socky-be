@@ -1,15 +1,17 @@
 //! Backend of the Socky application
 
+#![allow(unused)]
+
 pub mod app;
 pub mod common;
 
-pub mod ctx;
-pub mod error;
-pub mod log;
-pub mod model;
+mod ctx;
+mod error;
+mod log;
+mod model;
 pub mod repository;
-pub mod service;
-pub mod web;
+mod service;
+mod web;
 mod utils;
 
 pub use self::error::{Error, Result};

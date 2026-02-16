@@ -8,15 +8,16 @@ use crate::{
 };
 
 mod db;
+mod error;
 mod helper;
+mod ops;
 
-pub mod error;
-pub mod ops;
 pub mod token_repo;
 pub mod transaction_repo;
 pub mod user_repo;
 
 pub use error::RepositoryError;
+pub use ops::{create::Create, delete::Delete, get::Get, soft_delete::SoftDelete, update::Update};
 
 pub(in crate::repository) type Result<T> = core::result::Result<T, RepositoryError>;
 
