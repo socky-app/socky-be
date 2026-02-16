@@ -4,7 +4,7 @@ use argon2::{
 };
 use thiserror::Error;
 
-use crate::common::hmac::hash_sha512;
+use crate::utils::hmac::hash_sha512;
 
 #[derive(Debug, Error)]
 pub enum PasswordError {

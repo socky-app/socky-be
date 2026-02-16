@@ -8,5 +8,6 @@ pub mod model;
 pub mod repository;
 pub mod service;
 pub mod web;
+mod utils;
 
 pub use self::error::{Error, Result};
