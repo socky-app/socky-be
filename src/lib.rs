@@ -10,7 +10,7 @@ mod error;
 mod log;
 mod model;
 mod repository;
-mod service;
+mod controller;
 mod web;
 mod utils;
 
