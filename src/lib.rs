@@ -3,7 +3,7 @@
 #![allow(unused)]
 
 pub mod app;
-pub mod common;
+pub mod config;
 
 mod ctx;
 mod error;

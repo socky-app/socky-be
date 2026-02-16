@@ -2,7 +2,7 @@ use secrecy::{ExposeSecret, SecretString};
 use thiserror::Error;
 
 use crate::{
-    common::config::AuthConfig,
+    config::AuthConfig,
     utils::{
         hmac,
         password::PasswordUtils,

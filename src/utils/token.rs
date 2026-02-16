@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::common::config::AuthConfig;
+use crate::config::AuthConfig;
 
 // Using a consistent algorithm throughout
 const SELECTED_ALGO: Algorithm = Algorithm::HS256;

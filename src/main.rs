@@ -6,7 +6,7 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use socky_be::{
-    Result, app::{AppConfig, create_app}, common::{config::load_config}, repository::RepositoryManager,
+    Result, app::{AppConfig, create_app}, config::load_config, repository::RepositoryManager,
 };
 
 /// Entrypoint for the backend service

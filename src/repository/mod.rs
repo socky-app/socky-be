@@ -3,7 +3,7 @@
 use sqlx::PgPool;
 
 use crate::{
-    common::config::DbConfig,
+    config::DbConfig,
     repository::db::{create_pool, test_connection},
 };
 

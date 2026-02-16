@@ -3,7 +3,7 @@ use tower_cookies::CookieManagerLayer;
 use tracing::debug;
 
 use crate::{
-    common::config::{AuthConfig, RouterConfig},
+    config::{AuthConfig, RouterConfig},
     repository::RepositoryManager,
     web::{mw_auth, mw_res_map, routes_login, routes_static, routes_transaction},
 };

@@ -1,7 +1,7 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 
-use crate::common::config::DbConfig;
+use crate::config::DbConfig;
 
 pub mod error;
 

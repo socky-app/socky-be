@@ -5,7 +5,7 @@ use axum::{
 };
 use tower_http::services::ServeDir;
 
-use crate::common::config::RouterConfig;
+use crate::config::RouterConfig;
 
 pub fn serve_dir(app_config: &RouterConfig) -> MethodRouter {
     async fn handle_404() -> (StatusCode, &'static str) {
