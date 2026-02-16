@@ -1,6 +1,6 @@
 //! Backend of the Socky application
 
-#![allow(unused)]
+#![allow(unused)] // TODO: Remove this later
 
 pub mod app;
 pub mod config;
@@ -9,9 +9,13 @@ mod ctx;
 mod error;
 mod log;
 mod model;
-pub mod repository;
+mod repository;
 mod service;
 mod web;
 mod utils;
 
-pub use self::error::{Error, Result};
+// Re-export repository manager
+pub use repository::{RepositoryManager, RepositoryManagerError};
+
+// TODO: remove main crate error
+pub use error::{Error, Result};
