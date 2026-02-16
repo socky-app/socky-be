@@ -3,8 +3,8 @@ use figment::Figment;
 use secrecy::SecretString;
 use serde::Deserialize;
 
-const DEFAULT_APP_PORT: u16 = 8000;
-const DEFAULT_APP_HOST: &str = "0.0.0.0";
+const DEFAULT_NETWORK_PORT: u16 = 8000;
+const DEFAULT_NETWORK_HOST: &str = "0.0.0.0";
 const DEFAULT_DB_MAX_CONN: u32 = 10;
 const DEFAULT_DB_MIN_CONN: u32 = 1;
 const DEFAULT_DB_CONN_TIMEOUT_S: u64 = 10;
@@ -15,15 +15,20 @@ const DEFULAT_WEB_FOLDER: &str = "web-folder";
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub app: AppConfig,
+    pub network: NetworkConfig,
+    pub router: RouterConfig,
     pub db: DbConfig,
     pub auth: AuthConfig,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AppConfig {
+pub struct NetworkConfig {
     pub port: u16,
-    pub host: String,
+    pub host: String
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RouterConfig {
     pub web_folder: String,
 }
 
@@ -49,9 +54,9 @@ pub struct AuthConfig {
 pub fn load_config() -> Config {
     Figment::new()
         // --- App Defaults ---
-        .merge(Serialized::default("app.port", DEFAULT_APP_PORT))
-        .merge(Serialized::default("app.host", DEFAULT_APP_HOST))
-        .merge(Serialized::default("app.web_folder", DEFULAT_WEB_FOLDER))
+        .merge(Serialized::default("network.port", DEFAULT_NETWORK_PORT))
+        .merge(Serialized::default("network.host", DEFAULT_NETWORK_HOST))
+        .merge(Serialized::default("router.web_folder", DEFULAT_WEB_FOLDER))
         // --- Database Defaults ---
         .merge(Serialized::default("db.max_conn", DEFAULT_DB_MAX_CONN))
         .merge(Serialized::default("db.min_conn", DEFAULT_DB_MIN_CONN))

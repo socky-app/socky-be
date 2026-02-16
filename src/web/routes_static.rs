@@ -5,9 +5,9 @@ use axum::{
 };
 use tower_http::services::ServeDir;
 
-use crate::common::config::AppConfig;
+use crate::common::config::RouterConfig;
 
-pub fn serve_dir(app_config: &AppConfig) -> MethodRouter {
+pub fn serve_dir(app_config: &RouterConfig) -> MethodRouter {
     async fn handle_404() -> (StatusCode, &'static str) {
         (StatusCode::NOT_FOUND, "Resource not found.")
     }

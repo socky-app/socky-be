@@ -4,12 +4,13 @@ use axum::Router;
 use axum::{extract::State, Json};
 use tracing::debug;
 
+use crate::app::AppState;
 use crate::ctx::Ctx;
 use crate::error::Result;
 use crate::model::transaction::{CreateTransactionDto, TransactionVo};
 use crate::repository::RepositoryManager;
 
-pub fn routes(mc: RepositoryManager) -> Router {
+pub fn routes(app_state: AppState) -> Router {
     Router::new()
         .route(
             "/transaction",
@@ -19,7 +20,7 @@ pub fn routes(mc: RepositoryManager) -> Router {
             "/transaction/{id}",
             delete(delete_transaction).get(get_transaction),
         )
-        .with_state(mc)
+        .with_state(app_state)
 }
 
 async fn create_transaction(

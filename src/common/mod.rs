@@ -1,4 +1,3 @@
 pub mod config;
-pub mod state;
 
-// TODO: Move config, error, ctx
+// TODO: Check if common should still exist or move config to root modules
