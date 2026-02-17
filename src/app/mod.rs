@@ -21,7 +21,7 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
     let state = AppState::new(rm, app_config);
 
     let routes_api = routes_transaction::routes(state.clone())
-        .route_layer(middleware::from_fn(mw_auth::mw_require_auth)); // TODO: Fix state
+        .route_layer(middleware::from_fn(mw_auth::mw_require_auth));
 
     Router::new()
         .merge(routes_hello())
@@ -31,11 +31,12 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
         .layer(middleware::from_fn_with_state(
             state.clone(),
             mw_auth::mw_ctx_resolver,
-        )) // TODO: Fix state
+        ))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static::serve_dir(&state.config.router))
 }
 
+// TODO: Remove later
 fn routes_hello() -> Router {
     Router::new().route(
         "/hello",

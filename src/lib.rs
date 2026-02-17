@@ -18,4 +18,4 @@ mod utils;
 pub use repository::{RepositoryManager, RepositoryManagerError};
 
 // TODO: remove main crate error
-pub use error::{Error, Result};
+use error::{Error, Result};

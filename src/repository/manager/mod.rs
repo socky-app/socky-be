@@ -1,5 +1,3 @@
-use serde::Serialize;
-use serde_with::{serde_as, DisplayFromStr};
 use sqlx::PgPool;
 use thiserror::Error;
 
@@ -7,13 +5,12 @@ use crate::config::DbConfig;
 
 mod db;
 
-#[serde_as]
-#[derive(Error, Debug, Serialize)]
+#[derive(Error, Debug)]
 pub enum RepositoryManagerError {
     #[error("Failed to create DB pool")]
-    CreatePoolFailed(#[serde_as(as = "DisplayFromStr")] sqlx::Error),
+    CreatePoolFailed(sqlx::Error),
     #[error("Failed to connect to DB")]
-    ConnectionFailed(#[serde_as(as = "DisplayFromStr")] sqlx::Error),
+    ConnectionFailed(sqlx::Error),
 }
 
 #[derive(Clone)]
@@ -23,8 +20,6 @@ pub struct RepositoryManager {
 
 impl RepositoryManager {
     pub async fn new(config: &DbConfig) -> Result<Self, RepositoryManagerError> {
-        // If just re-exporting, would be better to change the return
-        // here as well, to avoid using the internal repo error for this.
         let rm = RepositoryManager {
             pool: db::create_pool(config).await?,
         };
