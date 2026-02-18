@@ -31,7 +31,7 @@ impl IntoResponse for WebError {
         let service_error = self.0;
 
         // Determine status code and user-facing message
-        let (status_code, user_message) = service_error.get_status_code_and_message();
+        let (status_code, user_message) = get_status_code_and_message(&service_error);
 
         // Build the Public Response Body
         let client_error = ClientError {
@@ -70,5 +70,68 @@ pub struct ErrorDetails {
 impl std::fmt::Display for ErrorDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.user_message)
+    }
+}
+
+/// Determine status code and user-facing message
+fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, String) {
+    match service_error {
+        ServiceError::Repository(e) => match e {
+            RepositoryError::NotFound { entity, id } => {
+                (StatusCode::NOT_FOUND, "Resource not found".to_string())
+            }
+            RepositoryError::DatabaseQueryFailed(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Service is temporarily unavailable. Please try again later.".to_string(),
+            ),
+        },
+
+        ServiceError::Auth(e) => match e {
+            AuthError::HashingFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Authentication processing failed.".to_string(),
+            ),
+            AuthError::InvalidLoginCredentials => (
+                StatusCode::UNAUTHORIZED,
+                "Invalid username or password.".to_string(),
+            ),
+            AuthError::InvalidToken | AuthError::ExpiredToken | AuthError::RevokedToken => (
+                StatusCode::UNAUTHORIZED,
+                "Invalid or expired token.".to_string(),
+            ),
+            AuthError::TokenCreationFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to generate token.".to_string(),
+            ),
+        },
+
+        ServiceError::User(e) => match e {
+            UserError::InvalidUserStatus => (
+                StatusCode::BAD_REQUEST,
+                "User status is invalid.".to_string(),
+            ),
+            UserError::UserIsDisabled => (
+                StatusCode::FORBIDDEN,
+                "User account is disabled.".to_string(),
+            ),
+            UserError::UserIsPending => (
+                StatusCode::BAD_REQUEST,
+                "User account is pending activation.".to_string(),
+            ),
+            UserError::UserIsLocked => (
+                StatusCode::BAD_REQUEST,
+                "User account is locked.".to_string(),
+            ),
+        },
+
+        ServiceError::CurrentUserExtractionError => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error".to_string(),
+        ),
+
+        ServiceError::Internal(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal server error".to_string(),
+        ),
     }
 }
