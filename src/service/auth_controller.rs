@@ -22,22 +22,48 @@ use crate::{
     service::{Result, ServiceError},
     utils::{
         hmac,
-        password::PasswordUtils,
+        password::{PasswordError, PasswordUtils},
         token::{self, AccessClaims, TokenError},
     },
 };
 
 #[derive(Debug, Error, Serialize)]
 pub enum AuthError {
-    InvalidPassword,
+    HashingFailed,
+    InvalidLoginCredentials,
     InvalidToken,
     ExpiredToken,
     RevokedToken,
+    TokenCreationFailed,
 }
 
 impl std::fmt::Display for AuthError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         write!(fmt, "{self:?}")
+    }
+}
+
+impl From<TokenError> for AuthError {
+    fn from(error: TokenError) -> Self {
+        match error {
+            TokenError::InvalidToken => AuthError::InvalidToken,
+            TokenError::ExpiredToken => AuthError::ExpiredToken,
+            TokenError::TokenCreationFailed => AuthError::TokenCreationFailed,
+        }
+    }
+}
+
+impl From<PasswordError> for AuthError {
+    fn from(error: PasswordError) -> Self {
+        match error {
+            PasswordError::PasswordHashingFailed => AuthError::HashingFailed,
+        }
+    }
+}
+
+impl From<hmac::InvalidLength> for AuthError {
+    fn from(_: hmac::InvalidLength) -> Self {
+        AuthError::HashingFailed
     }
 }
 
@@ -78,11 +104,13 @@ impl AuthController {
         );
 
         // 2. Generate token pair
-        let tokens = token::generate_tokens(credentials.id, auth_config)?;
+        let tokens =
+            token::generate_tokens(credentials.id, auth_config).map_err(AuthError::from)?;
         let refresh_token_hash = hmac::hash_sha512(
             tokens.refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
-        )?;
+        )
+        .map_err(AuthError::from)?;
 
         tracing::trace!(
             "Tokens generated successfully for user_id={}",
@@ -141,7 +169,8 @@ impl AuthController {
         let input_token_hash = hmac::hash_sha512(
             input_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
-        )?;
+        )
+        .map_err(AuthError::from)?;
 
         // 2. Fetch token record
         // We need to know if it exists to check for reuse or expiration
@@ -172,12 +201,14 @@ impl AuthController {
             token_entity.user_id,
             token_entity.family_id,
             auth_config,
-        )?;
+        )
+        .map_err(AuthError::from)?;
 
         let new_token_hash = hmac::hash_sha512(
             new_tokens.refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
-        )?;
+        )
+        .map_err(AuthError::from)?;
 
         // 6. Get user info
         let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
@@ -217,7 +248,8 @@ impl AuthController {
         let token_hash = hmac::hash_sha512(
             refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
-        )?;
+        )
+        .map_err(AuthError::from)?;
 
         // 2. Find the token to get its Family ID
         // If it's already gone/invalid, we can just return Ok (idempotent)
@@ -241,7 +273,8 @@ impl AuthController {
         Ok(token::validate_token::<AccessClaims>(
             token,
             auth_config.access_token_secret.expose_secret(),
-        )?)
+        )
+        .map_err(AuthError::from)?)
     }
 
     /// Verify login credentials.
@@ -256,10 +289,7 @@ impl AuthController {
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, username)
             .await?
-            .ok_or(ServiceError::NotFound {
-                entity: "username".to_string(),
-                id: username.to_string(),
-            })?;
+            .ok_or(AuthError::InvalidLoginCredentials)?;
 
         tracing::trace!(
             "User found for username={}, user_id={}, status={}",
@@ -293,7 +323,7 @@ impl AuthController {
                 username,
                 user.id
             );
-            return Err(AuthError::InvalidPassword.into());
+            return Err(AuthError::InvalidLoginCredentials.into());
         }
 
         tracing::trace!(
