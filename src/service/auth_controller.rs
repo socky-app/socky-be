@@ -1,7 +1,7 @@
 use std::thread::AccessError;
 
 use secrecy::{ExposeSecret, SecretString};
-use serde::Serialize;
+
 use thiserror::Error;
 
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Error, Serialize)]
+#[derive(Debug, Error)]
 pub enum AuthError {
     HashingFailed,
     InvalidLoginCredentials,
@@ -314,7 +314,7 @@ impl AuthController {
                 PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
-            .map_err(|_e| ServiceError::Internal("Password verification failed".to_string()))?
+            .map_err(|_e| ServiceError::Internal("Password verification blocking thread failed to join".to_string()))?
         };
 
         if !is_valid {

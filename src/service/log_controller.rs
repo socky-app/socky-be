@@ -57,5 +57,5 @@ struct RequestLogLine {
     // Error attributes
     user_error_message: Option<String>,
     service_error_type: Option<String>,
-    service_error_data: Option<Value>,
+    service_error_data: Option<String>,
 }
