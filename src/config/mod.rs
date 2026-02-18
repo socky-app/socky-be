@@ -1,11 +1,7 @@
-use std::fmt;
-
 use figment::providers::{Env, Serialized};
 use figment::Figment;
 use secrecy::SecretString;
 use serde::Deserialize;
-use thiserror::Error;
-use tracing::error;
 
 const DEFAULT_NETWORK_PORT: u16 = 8000;
 const DEFAULT_NETWORK_HOST: &str = "0.0.0.0";
@@ -17,10 +13,9 @@ const DEFAULT_ACCESS_TOKEN_EXPIRATION_S: i64 = 60 * 15; // 15 min
 const DEFAULT_REFRESH_TOKEN_EXPIRATION_S: i64 = 60 * 60 * 24 * 15; // 15 days
 const DEFULAT_WEB_FOLDER: &str = "web-folder";
 
-#[derive(Debug, Error)]
-pub struct ConfigError {
-    pub details: Vec<String>,
-}
+mod error;
+
+pub use error::ConfigError;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -30,10 +25,36 @@ pub struct Config {
     pub auth: AuthConfig,
 }
 
+impl From<Config> for (NetworkConfig, AppConfig, DbConfig) {
+    fn from(value: Config) -> Self {
+        (
+            value.network,
+            AppConfig {
+                router: value.router,
+                auth: value.auth,
+            },
+            value.db,
+        )
+    }
+}
+    
+
+#[derive(Debug)]
+pub struct AppConfig {
+    pub router: RouterConfig,
+    pub auth: AuthConfig,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct NetworkConfig {
     pub port: u16,
     pub host: String
+}
+
+impl NetworkConfig {
+    pub fn addr(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,35 +114,3 @@ pub fn load_config() -> Result<Config, ConfigError> {
     )
 }
 
-impl From<figment::Error> for ConfigError {
-    fn from(value: figment::Error) -> Self {
-        let details = value
-                .into_iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>();
-
-            ConfigError { details }
-    }
-}
-
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "\n====================================================")?;
-        writeln!(f, "❌ CONFIGURATION ERROR")?;
-        writeln!(f, "====================================================")?;
-
-        for (i, msg) in self.details.iter().enumerate() {
-            writeln!(f, "{}. Issue: {}", i + 1, msg)?;
-        }
-
-        writeln!(f, "----------------------------------------------------")?;
-        writeln!(f, "💡 TROUBLESHOOTING:")?;
-        writeln!(f, "Ensure these Environment Variables are set (double __ for nesting):")?;
-        writeln!(f, "   - SOCKY_DB__URL")?;
-        writeln!(f, "   - SOCKY_AUTH__PASSWORD_PEPPER")?;
-        writeln!(f, "   - SOCKY_AUTH__ACCESS_TOKEN_SECRET")?;
-        writeln!(f, "   - SOCKY_AUTH__REFRESH_TOKEN_SECRET")?;
-        writeln!(f, "   - SOCKY_AUTH__REFRESH_TOKEN_PEPPER")?;
-        writeln!(f, "====================================================")
-    }
-}

@@ -11,7 +11,7 @@ use super::RepositoryManagerError;
 /// Returns a `Error` if connecting to the database fails.
 #[tracing::instrument(name = "create_db_pool", skip_all)]
 pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerError> {
-    tracing::info!("Creating database connection pool...");
+    tracing::trace!("Creating database connection pool...");
     let pool = PgPoolOptions::new()
         .max_connections(config.max_conn)
         .min_connections(config.min_conn)
@@ -21,7 +21,7 @@ pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerE
         .await
         .map_err(RepositoryManagerError::CreatePoolFailed)?;
 
-    tracing::info!("Database connection pool created successfully.");
+    tracing::trace!("Database connection pool created successfully.");
     Ok(pool)
 }
 
@@ -32,11 +32,11 @@ pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerE
 /// Returns a `Error` if the query fails, indicating a problem with the connection.
 #[tracing::instrument(name = "test_db_connection", skip(pool))]
 pub async fn test_connection(pool: &PgPool) -> Result<(), RepositoryManagerError> {
-    tracing::debug!("Executing database connection test query...");
+    tracing::trace!("Executing database connection test query...");
     sqlx::query("SELECT 1")
         .execute(pool)
         .await
         .map_err(RepositoryManagerError::ConnectionFailed)?;
-    tracing::info!("Database connection test successful.");
+    tracing::trace!("Database connection test successful.");
     Ok(())
 }

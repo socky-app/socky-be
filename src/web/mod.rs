@@ -1,9 +1,11 @@
 //! Web layer.
 
-pub mod mw_auth;
-pub mod mw_res_map;
+mod error;
+
+pub mod middleware;
 pub mod routes_login;
 pub mod routes_static;
 pub mod routes_transaction;
 
-pub const AUTH_TOKEN: &str = "auth-token";
+pub use error::{ErrorDetails, WebError};
+pub(in crate::web) type Result<T> = core::result::Result<T, WebError>;

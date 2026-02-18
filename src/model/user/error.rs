@@ -1,6 +1,7 @@
+use serde::Serialize;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, Serialize)]
 pub enum UserError {
     #[error("Invalid user status")]
     InvalidUserStatus,

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::FromRef;
 
-use crate::{app::AppConfig, repository::RepositoryManager};
+use crate::{config::AppConfig, repository::RepositoryManager};
 
 #[derive(Clone)]
 pub struct AppState {

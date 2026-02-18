@@ -1,20 +1,20 @@
 //! Entrypoint for the the Socky backend.
 
-use std::net::SocketAddr;
-use tokio::net::TcpListener;
-use tracing::{info, error};
-use tracing_subscriber::EnvFilter;
 use thiserror::Error;
+use tokio::net::TcpListener;
+use tracing_subscriber::EnvFilter;
 
 use socky_be::{
-    app::{AppConfig, create_app}, config::{load_config, ConfigError}, RepositoryManager, RepositoryManagerError,
+    config::{load_config, ConfigError},
+    create_app,
+    startup::{RepositoryManager, RepositoryManagerError},
 };
 
 #[derive(Debug, Error)]
 enum RunError {
     #[error(transparent)]
     Config(#[from] ConfigError),
-    
+
     #[error(transparent)]
     Repository(#[from] RepositoryManagerError),
 
@@ -24,19 +24,17 @@ enum RunError {
 
 async fn run() -> Result<(), RunError> {
     // Load config
-    let config = load_config()?;
+    let (net_config, app_config, db_config) = load_config()?.into();
 
     // Initialize RepositoryManager
-    let rm = RepositoryManager::new(&config.db).await?;
+    let rm = RepositoryManager::new(&db_config).await?;
 
     // Create app
-    let app_config = AppConfig { router: config.router, auth: config.auth };
     let app = create_app(rm, app_config);
 
     // Start server
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080)); // TODO: fix
-    let listener = TcpListener::bind(addr).await?;
-    info!("{:<12} - {addr}\n", "LISTENING");
+    let listener = TcpListener::bind(&net_config.addr()).await?;
+    tracing::info!("{:<12} - {}\n", "LISTENING", net_config.addr());
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -56,7 +54,7 @@ async fn main() {
         .init();
 
     if let Err(e) = run().await {
-        error!("Application finished with error: {}", e);
+        tracing::error!("Application finished with error: {}", e);
         std::process::exit(1);
     }
 }

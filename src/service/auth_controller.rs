@@ -1,61 +1,49 @@
+use std::thread::AccessError;
+
 use secrecy::{ExposeSecret, SecretString};
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
     config::AuthConfig,
+    model::{
+        refresh_token::CreateRefreshTokenDto,
+        user::{
+            dto::LoginRequestDto,
+            error::UserError,
+            vo::{AuthResponseVo, LoggedUserInfoVo},
+            LoginCredentialsEntity, UserEntity, UserStatus,
+        },
+    },
+    repository::{
+        token_repo::TokenRepository, user_repo::UserRepository, Create, Get, RepositoryError,
+        RepositoryManager,
+    },
+    service::{Result, ServiceError},
     utils::{
         hmac,
         password::PasswordUtils,
-        token::{self, TokenError},
+        token::{self, AccessClaims, TokenError},
     },
-    model::{refresh_token::CreateRefreshTokenDto, user::{
-        LoginCredentialsEntity, UserEntity, UserStatus, dto::LoginRequestDto, error::UserError, vo::{AuthResponseVo, LoggedUserInfoVo}
-    }},
-    repository::{RepositoryError, RepositoryManager, Create, Get, token_repo::TokenRepository, user_repo::UserRepository},
 };
 
-#[derive(Debug, Error)]
-pub enum AuthServiceError {
-    Repository(#[from] RepositoryError),
-    UserNotFound,
-    WrongPassword,
-    InvalidUser(#[from] UserError),
-    InvalidRefreshToken,
-    ExpiredRefreshToken,
-    RevokedRefreshToken,
-    InternalError,
+#[derive(Debug, Error, Serialize)]
+pub enum AuthError {
+    InvalidPassword,
+    InvalidToken,
+    ExpiredToken,
+    RevokedToken,
 }
 
-type Result<T> = core::result::Result<T, AuthServiceError>;
-
-impl core::fmt::Display for AuthServiceError {
-    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
+impl std::fmt::Display for AuthError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         write!(fmt, "{self:?}")
     }
 }
 
-impl From<TokenError> for AuthServiceError {
-    fn from(error: TokenError) -> Self {
-        match error {
-            // Direct mappings
-            TokenError::InvalidToken => AuthServiceError::InvalidRefreshToken,
-            TokenError::ExpiredToken => AuthServiceError::ExpiredRefreshToken,
+pub struct AuthController;
 
-            // Map technical/unexpected errors to a generic InternalError
-            TokenError::TokenCreationFailed => AuthServiceError::InternalError,
-        }
-    }
-}
-
-impl From<hmac::InvalidLength> for AuthServiceError {
-    fn from(_: hmac::InvalidLength) -> Self {
-        AuthServiceError::InternalError
-    }
-}
-
-pub struct AuthService;
-
-impl AuthService {
+impl AuthController {
     // Login user.
     pub async fn login(
         rm: &RepositoryManager,
@@ -63,7 +51,7 @@ impl AuthService {
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         let start = std::time::Instant::now();
-        tracing::info!("Login attempt received for username: {}", request.username);
+        tracing::trace!("Login attempt received for username: {}", request.username);
 
         // 1. Verify login credentials
         let credentials = Self::verify_login(
@@ -83,7 +71,7 @@ impl AuthService {
         })?;
 
         let verification_time = start.elapsed();
-        tracing::debug!(
+        tracing::trace!(
             "User verification completed in {:?} for user_id={}",
             verification_time,
             credentials.id
@@ -96,7 +84,7 @@ impl AuthService {
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
         )?;
 
-        tracing::debug!(
+        tracing::trace!(
             "Tokens generated successfully for user_id={}",
             credentials.id
         );
@@ -104,7 +92,7 @@ impl AuthService {
         // 3. Get user info
         let user_info = Self::get_login_info(rm, credentials.id).await?;
 
-        tracing::debug!(
+        tracing::trace!(
             "User info retrieved successfully for user_id={}",
             credentials.id
         );
@@ -128,7 +116,7 @@ impl AuthService {
         }
 
         let total_time = start.elapsed();
-        tracing::info!(
+        tracing::trace!(
             "Login successful for username={}, user_id={}, total_time={:?}",
             &request.username,
             credentials.id,
@@ -157,29 +145,33 @@ impl AuthService {
 
         // 2. Fetch token record
         // We need to know if it exists to check for reuse or expiration
-        let token_entity = TokenRepository::get_by_hash(rm, &input_token_hash).await?
-            .ok_or(AuthServiceError::InvalidRefreshToken)?;
+        let token_entity = TokenRepository::get_by_hash(rm, &input_token_hash)
+            .await?
+            .ok_or(AuthError::InvalidToken)?;
 
         // 3. Reuse Detection (Security Critical)
         if token_entity.is_revoked {
-            tracing::error!("Token reuse detected! Revoking family: {}", token_entity.family_id);
+            tracing::warn!(
+                "Token reuse detected! Revoking family: {}",
+                token_entity.family_id
+            );
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
             // Return generic error to avoid leaking implementation details
-            return Err(AuthServiceError::RevokedRefreshToken); 
+            return Err(AuthError::RevokedToken.into());
         }
 
         // 4. Check expiration
         // We check against the DB record, not the JWT claim (Stateful check)
         if token_entity.expires_at < chrono::Utc::now().naive_utc() {
-            return Err(AuthServiceError::ExpiredRefreshToken);
+            return Err(AuthError::ExpiredToken.into());
         }
 
         // 5. Generate new refresh token pair
         // CRITICAL: We pass the EXISTING family_id to maintain the chain
         let new_tokens = token::generate_tokens_with_family_id(
             token_entity.user_id,
-            token_entity.family_id, 
-            auth_config
+            token_entity.family_id,
+            auth_config,
         )?;
 
         let new_token_hash = hmac::hash_sha512(
@@ -202,7 +194,8 @@ impl AuthService {
             rm,
             &create_dto,
             token_entity.id, // Old token (to revoke)
-        ).await?;
+        )
+        .await?;
 
         // 8. Return new tokens
         Ok(AuthResponseVo {
@@ -218,7 +211,7 @@ impl AuthService {
         refresh_token: &str,
         auth_config: &AuthConfig,
     ) -> Result<()> {
-        tracing::info!("Logout attempt received");
+        tracing::trace!("Logout attempt received");
 
         // 1. Hash incoming token
         let token_hash = hmac::hash_sha512(
@@ -229,14 +222,26 @@ impl AuthService {
         // 2. Find the token to get its Family ID
         // If it's already gone/invalid, we can just return Ok (idempotent)
         if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
-           
             // 3. Revoke the entire Family
-            tracing::info!("Revoking session family: {}", token_entity.family_id);
+            tracing::trace!("Revoking session family: {}", token_entity.family_id);
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
         }
 
-        tracing::info!("Logout successful.");
+        tracing::trace!("Logout successful.");
         Ok(())
+    }
+
+    /// Verify if the access token is valid.
+    pub fn verify_access_token(
+        token: Option<&str>,
+        auth_config: &AuthConfig,
+    ) -> Result<AccessClaims> {
+        let token = token.ok_or(AuthError::InvalidToken)?;
+
+        Ok(token::validate_token::<AccessClaims>(
+            token,
+            auth_config.access_token_secret.expose_secret(),
+        )?)
     }
 
     /// Verify login credentials.
@@ -246,14 +251,17 @@ impl AuthService {
         password: &str,
         pepper: &SecretString,
     ) -> Result<LoginCredentialsEntity> {
-        tracing::info!("Starting login verification for username: {}", username);
+        tracing::trace!("Starting login verification for username: {}", username);
 
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, username)
             .await?
-            .ok_or(AuthServiceError::UserNotFound)?;
+            .ok_or(ServiceError::NotFound {
+                entity: "username".to_string(),
+                id: username.to_string(),
+            })?;
 
-        tracing::debug!(
+        tracing::trace!(
             "User found for username={}, user_id={}, status={}",
             username,
             user.id,
@@ -276,7 +284,7 @@ impl AuthService {
                 PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
-            .map_err(|_e| AuthServiceError::InternalError)?
+            .map_err(|_e| ServiceError::Internal("Password verification failed".to_string()))?
         };
 
         if !is_valid {
@@ -285,10 +293,10 @@ impl AuthService {
                 username,
                 user.id
             );
-            return Err(AuthServiceError::WrongPassword);
+            return Err(AuthError::InvalidPassword.into());
         }
 
-        tracing::info!(
+        tracing::trace!(
             "Login verification successful for username={}, user_id={}",
             username,
             user.id
@@ -298,12 +306,12 @@ impl AuthService {
     }
 
     async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
-        tracing::info!(user_id, "Starting to fetch comprehensive user info");
+        tracing::trace!(user_id, "Starting to fetch comprehensive user info");
 
         // Get user basic info
         let user: UserEntity = UserRepository::get(rm, user_id).await?;
 
-        tracing::debug!(
+        tracing::trace!(
             "User basic info retrieved for user_id={}, username={}",
             user_id,
             user.username
@@ -312,7 +320,7 @@ impl AuthService {
         // TODO: Get user permissions, may update permissions cache, and retrieve
         // any other attributes relevant to the logged user.
 
-        tracing::info!(
+        tracing::trace!(
             "User info retrieved successfully for user_id={}, username={}",
             user_id,
             user.username

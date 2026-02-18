@@ -54,7 +54,7 @@ impl TransactionRepository {
                 tracing::error!("Database error counting transactions: {:?}", e);
             })?;
 
-        tracing::info!("transaction count: {:?}", count);
+        tracing::trace!("transaction count: {:?}", count);
 
         Ok(count.0)
     }
@@ -66,7 +66,7 @@ impl TransactionRepository {
         limit: i64,
         query: TransactionQueryDto,
     ) -> Result<(Vec<TransactionEntity>, i64)> {
-        tracing::debug!(
+        tracing::trace!(
             "Finding transactions with pagination and filters: {:?}",
             query
         );

@@ -2,20 +2,20 @@
 
 #![allow(unused)] // TODO: Remove this later
 
-pub mod app;
 pub mod config;
 
+mod app;
 mod ctx;
-mod error;
-mod log;
 mod model;
 mod repository;
-mod controller;
-mod web;
+mod service;
 mod utils;
+mod web;
 
-// Re-export repository manager
-pub use repository::{RepositoryManager, RepositoryManagerError};
+// Re-export create_app function
+pub use app::create_app;
 
-// TODO: remove main crate error
-use error::{Error, Result};
+// Re-export startup functions
+pub mod startup {
+    pub use crate::repository::{RepositoryManager, RepositoryManagerError};
+}
