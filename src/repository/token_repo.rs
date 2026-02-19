@@ -14,7 +14,7 @@ use crate::{
 pub struct TokenRepository;
 
 impl DatabaseTable for TokenRepository {
-    const TABLE: &'static str = "refresh_token";
+    const TABLE: &'static str = "refresh_tokens";
     // Note: The refresh_token table must not implement SoftDeleteStrategy,
     // otherwise the logic in get_by_hash and revoke_family would have to change.
     type DeleteStrategy = HardDeleteStrategy;

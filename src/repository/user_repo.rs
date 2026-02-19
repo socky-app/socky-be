@@ -19,7 +19,7 @@ use crate::{
 pub struct UserRepository;
 
 impl DatabaseTable for UserRepository {
-    const TABLE: &'static str = "user";
+    const TABLE: &'static str = "users";
     type DeleteStrategy = SoftDeleteStrategy;
 }
 

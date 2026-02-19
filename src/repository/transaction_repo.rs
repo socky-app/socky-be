@@ -15,7 +15,7 @@ use sqlx::QueryBuilder;
 pub struct TransactionRepository;
 
 impl ops::DatabaseTable for TransactionRepository {
-    const TABLE: &'static str = "transaction";
+    const TABLE: &'static str = "transactions";
     type DeleteStrategy = SoftDeleteStrategy;
 }
 
