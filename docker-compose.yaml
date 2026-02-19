@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: socky_postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${SOCKY_DB__USER}
+      POSTGRES_PASSWORD: ${SOCKY_DB__PASSWORD}
+      POSTGRES_DB: ${SOCKY_DB__NAME}
+    volumes:
+      # This maps the local folder ./postgres-data to the container
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SOCKY_DB__USER} -d ${SOCKY_DB__NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
