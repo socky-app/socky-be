@@ -79,20 +79,20 @@ impl AuthController {
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         let start = std::time::Instant::now();
-        tracing::trace!("Login attempt received for username: {}", request.username);
+        tracing::trace!("Login attempt received for email: {}", request.email);
 
         // 1. Verify login credentials
         let credentials = Self::verify_login(
             &rm.clone(),
-            &request.username,
+            &request.email,
             &request.password,
             &auth_config.password_pepper,
         )
         .await
         .map_err(|e| {
             tracing::warn!(
-                "Login verification failed for username={}: {:?}",
-                request.username,
+                "Login verification failed for email={}: {:?}",
+                request.email,
                 e
             );
             e
@@ -102,12 +102,12 @@ impl AuthController {
         tracing::trace!(
             "User verification completed in {:?} for user_id={}",
             verification_time,
-            credentials.id
+            credentials.user_id
         );
 
         // 2. Generate token pair
         let tokens =
-            token::generate_tokens(credentials.id, auth_config).map_err(AuthError::from)?;
+            token::generate_tokens(credentials.user_id, auth_config).map_err(AuthError::from)?;
         let refresh_token_hash = hmac::hash_sha512(
             tokens.refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
@@ -116,20 +116,20 @@ impl AuthController {
 
         tracing::trace!(
             "Tokens generated successfully for user_id={}",
-            credentials.id
+            credentials.user_id
         );
 
         // 3. Get user info
-        let user_info = Self::get_login_info(rm, credentials.id).await?;
+        let user_info = Self::get_login_info(rm, credentials.user_id).await?;
 
         tracing::trace!(
             "User info retrieved successfully for user_id={}",
-            credentials.id
+            credentials.user_id
         );
 
         // 4. Store refresh token
         let create_dto = CreateRefreshTokenDto {
-            user_id: credentials.id,
+            user_id: credentials.user_id,
             family_id: tokens.family_id,
             token_hash: &refresh_token_hash,
             expires_at: tokens.refresh_expires_at,
@@ -139,7 +139,7 @@ impl AuthController {
         // 5. Update last login time (fire & forget)
         {
             let rm_clone = rm.clone();
-            let user_id_clone = credentials.id;
+            let user_id_clone = credentials.user_id;
             tokio::spawn(async move {
                 let _ = UserRepository::update_last_login(&rm_clone, user_id_clone).await;
             });
@@ -147,9 +147,9 @@ impl AuthController {
 
         let total_time = start.elapsed();
         tracing::trace!(
-            "Login successful for username={}, user_id={}, total_time={:?}",
-            &request.username,
-            credentials.id,
+            "Login successful for email={}, user_id={}, total_time={:?}",
+            &request.email,
+            credentials.user_id,
             total_time
         );
 
@@ -270,27 +270,26 @@ impl AuthController {
     /// Verify login credentials.
     async fn verify_login(
         rm: &RepositoryManager,
-        username: &str,
+        email: &str,
         password: &str,
         pepper: &SecretString,
     ) -> Result<LoginCredentialsEntity> {
-        tracing::trace!("Starting login verification for username: {}", username);
+        tracing::trace!("Starting login verification for user: {}", email);
 
         // 1. Get login credentials
-        let user = UserRepository::get_login_credentials(rm, username)
+        let user = UserRepository::get_login_credentials(rm, email)
             .await?
             .ok_or(AuthError::InvalidLoginCredentials)?;
 
         tracing::trace!(
-            "User found for username={}, user_id={}, status={}",
-            username,
-            user.id,
+            "User found for email={}, user_id={}, status={:?}",
+            email,
+            user.user_id,
             user.status
         );
 
-        // 2. Check if user is enabled
-        let status = UserStatus::try_from(user.status)?;
-        status.check_status()?;
+        // 2. Check if user is active
+        user.status.check_status()?;
 
         // 3. Verify password
         // Move to a spawn_blocking thread to release the executor threads from
@@ -309,17 +308,17 @@ impl AuthController {
 
         if !is_valid {
             tracing::warn!(
-                "Invalid login attempt: password verification failed for username={}, user_id={}",
-                username,
-                user.id
+                "Invalid login attempt: password verification failed for email={}, user_id={}",
+                email,
+                user.user_id
             );
             return Err(AuthError::InvalidLoginCredentials.into());
         }
 
         tracing::trace!(
-            "Login verification successful for username={}, user_id={}",
-            username,
-            user.id
+            "Login verification successful for email={}, user_id={}",
+            email,
+            user.user_id
         );
 
         Ok(user)
@@ -332,23 +331,22 @@ impl AuthController {
         let user: UserEntity = UserRepository::get(rm, user_id).await?;
 
         tracing::trace!(
-            "User basic info retrieved for user_id={}, username={}",
+            "User basic info retrieved for user_id={}, email={}",
             user_id,
-            user.username
+            user.email
         );
 
         // TODO: Get user permissions, may update permissions cache, and retrieve
         // any other attributes relevant to the logged user.
 
         tracing::trace!(
-            "User info retrieved successfully for user_id={}, username={}",
+            "User info retrieved successfully for user_id={}, email={}",
             user_id,
-            user.username
+            user.email
         );
 
         Ok(LoggedUserInfoVo {
-            id: user.id,
-            username: user.username,
+            id: user.user_id,
             email: user.email,
         })
     }

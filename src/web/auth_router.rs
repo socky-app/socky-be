@@ -31,7 +31,7 @@ pub fn protected() -> Router<AppState> {
     // .route("/me", get(me_handler))
 }
 
-/// Login with username and password.
+/// Login with email and password.
 // TODO: #[tracing::instrument(name = "login", skip(pool, addr, headers, request))]
 async fn login_handler(
     State(rm): State<RepositoryManager>,

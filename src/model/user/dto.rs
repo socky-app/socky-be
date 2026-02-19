@@ -1,28 +1,29 @@
 use serde::Deserialize;
 
+use crate::model::user::{UserRole, UserStatus};
+
 /// Create user request parameters.
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateUserDto {
-    pub username: String,
     pub email: String,
     pub password: String,
-    /// User status: Defaults to 1.
-    pub status: Option<i16>,
+    pub role: UserRole,
+    pub status: UserStatus,
 }
 
 /// Request payload for user authentication.
 #[derive(Deserialize)]
 pub struct LoginRequestDto {
-    /// Username or email for authentication
-    pub username: String,
+    /// Email for authentication
+    pub email: String,
     /// User's password in plain text
     pub password: String,
 }
 
 /// Update user request parameters.
 #[derive(Debug, Clone, Deserialize)]
-pub struct UpdateUserDto {
-    pub email: String,
+pub struct UpdateUserStatusDto {
+    pub status: UserStatus,
 }
 
 /// Update user password request parameters.

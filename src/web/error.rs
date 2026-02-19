@@ -93,7 +93,7 @@ fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, Str
             ),
             AuthError::InvalidLoginCredentials => (
                 StatusCode::UNAUTHORIZED,
-                "Invalid username or password.".to_string(),
+                "Invalid email or password.".to_string(),
             ),
             AuthError::MissingToken
             | AuthError::InvalidToken

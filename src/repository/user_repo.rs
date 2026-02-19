@@ -3,15 +3,12 @@ use sqlx::QueryBuilder;
 
 use crate::{
     model::user::{
-        dto::{CreateUserDto, UpdateUserDto, UpdateUserPasswordDto},
-        LoginCredentialsEntity, UserEntity,
+        LoginCredentialsEntity, UserEntity, dto::{CreateUserDto, UpdateUserPasswordDto, UpdateUserStatusDto}
     },
     repository::{
-        ops::{
-            create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
-            DatabaseTable,
-        },
-        RepositoryManager, Result,
+        RepositoryManager, Result, ops::{
+            DatabaseTable, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update
+        }
     },
 };
 
@@ -32,7 +29,7 @@ impl get::Get for UserRepository {
 }
 
 impl update::Update for UserRepository {
-    type D = UpdateUserDto;
+    type D = UpdateUserStatusDto;
 }
 
 impl delete::Delete for UserRepository {}
@@ -40,6 +37,9 @@ impl delete::Delete for UserRepository {}
 impl soft_delete::SoftDelete for UserRepository {}
 
 /// Implement password update.
+// TODO: Fix that, since this update must happen within a transaction while
+// invalidating all the user's token. This could be moved to an AuthRepo,
+// that can call UserRepo and TokenRepo, for example.
 impl UserRepository {
     pub async fn update_user_password(
         rm: &RepositoryManager,
@@ -56,23 +56,18 @@ impl UserRepository {
     pub async fn email_exists(rm: &RepositoryManager, email: &str) -> Result<bool> {
         Self::exists_by_column(rm, "email", email).await
     }
-
-    /// Check if username exists
-    pub async fn username_exists(rm: &RepositoryManager, username: &str) -> Result<bool> {
-        Self::exists_by_column(rm, "username", username).await
-    }
 }
 
 /// Implement login and auth operations.
 impl UserRepository {
-    /// Get user by username for authentication (only essential fields)
+    /// Get user by email for authentication (only essential fields)
     pub async fn get_login_credentials(
         rm: &RepositoryManager,
-        username: &str,
+        email: &str,
     ) -> Result<Option<LoginCredentialsEntity>> {
         Ok(
             sqlx::query_as::<_, LoginCredentialsEntity>("SELECT * FROM get_login_credentials($1)")
-                .bind(username)
+                .bind(email)
                 .fetch_optional(rm.pool())
                 .await
                 .inspect_err(|e| {
@@ -103,21 +98,21 @@ impl UserRepository {
 impl create::Insertable for CreateUserDto {
     fn push_insert<'r>(&'r self, query_builder: &mut QueryBuilder<'r, sqlx::Postgres>) {
         query_builder
-            .push("(username, email, password_hash, status) VALUES (")
-            .push_bind(&self.username)
-            .push(", ")
+            .push("(email, password_hash, role, status) VALUES (")
             .push_bind(&self.email)
             .push(", ")
             .push_bind(&self.password)
+            .push(", ")
+            .push_bind(self.role)
             .push(", ")
             .push_bind(self.status)
             .push(")");
     }
 }
 
-impl update::Updatable for UpdateUserDto {
+impl update::Updatable for UpdateUserStatusDto {
     fn push_update<'q>(&'q self, b: &mut QueryBuilder<'q, sqlx::Postgres>) {
-        b.push("email = ").push_bind(&self.email);
+        b.push("status = ").push_bind(self.status);
     }
 }
 

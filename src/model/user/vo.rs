@@ -1,15 +1,15 @@
 use chrono::NaiveDateTime;
 use serde::Serialize;
 
-use crate::model::user::UserEntity;
+use crate::model::user::{UserEntity, UserRole, UserStatus};
 
 /// User item for list display.
 #[derive(Debug, Serialize)]
 pub struct UserVo {
     pub id: i64,
-    pub username: String,
     pub email: String,
-    pub status: i16,
+    pub role: UserRole,
+    pub status: UserStatus,
     pub last_login_at: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -21,9 +21,9 @@ pub type UserOptionVo = Option<i64>;
 impl From<UserEntity> for UserVo {
     fn from(user: UserEntity) -> Self {
         Self {
-            id: user.id,
-            username: user.username,
+            id: user.user_id,
             email: user.email,
+            role: user.role,
             status: user.status,
             last_login_at: user.last_login_at,
             created_at: user.created_at,
@@ -48,10 +48,6 @@ pub struct AuthResponseVo {
 pub struct LoggedUserInfoVo {
     /// Unique identifier of the user
     pub id: i64,
-    /// Username of the user
-    pub username: String,
     /// Email of the user
     pub email: String,
-    // /// List of permission codes the user has access to
-    // pub permissions: Vec<String>,
 }

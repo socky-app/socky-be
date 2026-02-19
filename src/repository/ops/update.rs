@@ -11,6 +11,8 @@ pub trait Updatable {
     fn push_update<'r>(&'r self, b: &mut QueryBuilder<'r, Postgres>);
 }
 
+// TODO: Fix this trait so that it is generic, not trait type,
+// so that I can implement it for multiple DTOs.
 pub trait Update: DatabaseTable + Sized {
     type D: Updatable + Sync;
 
