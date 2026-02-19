@@ -31,7 +31,7 @@ impl LogController {
             method,
             user_id: Some(0), // TODO: Fix
 
-            user_error_message: error_details.map(|e| e.user_message.clone()),
+            client_message: error_details.map(|e| e.client_message.clone()),
             service_error_type: error_details.map(|e| e.error_type.clone()),
             service_error_data: error_details.map(|e| e.error_data.clone()),
         };
@@ -55,7 +55,7 @@ struct RequestLogLine {
     method: String,
 
     // Error attributes
-    user_error_message: Option<String>,
+    client_message: Option<String>,
     service_error_type: Option<String>,
     service_error_data: Option<String>,
 }

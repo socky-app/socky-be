@@ -5,7 +5,7 @@
 pub mod config;
 
 mod app;
-mod ctx;
+mod context;
 mod model;
 mod repository;
 mod service;

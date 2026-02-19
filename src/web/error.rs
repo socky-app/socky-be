@@ -31,18 +31,18 @@ impl IntoResponse for WebError {
         let service_error = self.0;
 
         // Determine status code and user-facing message
-        let (status_code, user_message) = get_status_code_and_message(&service_error);
+        let (status_code, client_message) = get_status_code_and_message(&service_error);
 
         // Build the Public Response Body
         let client_error = ClientError {
-            error: user_message.clone(),
+            message: client_message.clone(),
         };
 
         // Build the Error Details
         let details = ErrorDetails {
             error_type: service_error.as_ref().into(),
             error_data: format!("{:?}", service_error),
-            user_message: user_message,
+            client_message,
         };
 
         // Create response and add details to it
@@ -56,7 +56,7 @@ impl IntoResponse for WebError {
 /// Public JSON error structure
 #[derive(Serialize)]
 struct ClientError {
-    error: String,
+    message: String,
 }
 
 /// Error details used during request logging.
@@ -64,12 +64,12 @@ struct ClientError {
 pub struct ErrorDetails {
     pub error_type: String,
     pub error_data: String,
-    pub user_message: String,
+    pub client_message: String,
 }
 
 impl std::fmt::Display for ErrorDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.user_message)
+        write!(f, "{}", self.client_message)
     }
 }
 
@@ -95,7 +95,10 @@ fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, Str
                 StatusCode::UNAUTHORIZED,
                 "Invalid username or password.".to_string(),
             ),
-            AuthError::InvalidToken | AuthError::ExpiredToken | AuthError::RevokedToken => (
+            AuthError::MissingToken
+            | AuthError::InvalidToken
+            | AuthError::ExpiredToken
+            | AuthError::RevokedToken => (
                 StatusCode::UNAUTHORIZED,
                 "Invalid or expired token.".to_string(),
             ),

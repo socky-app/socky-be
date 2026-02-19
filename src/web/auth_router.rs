@@ -1,0 +1,78 @@
+use std::sync::Arc;
+
+use axum::{
+    extract::{Request, State},
+    http::header,
+    routing::post,
+    Json, Router,
+};
+use serde_json::json;
+
+use crate::{
+    app::AppState,
+    config::AppConfig,
+    context::CurrentUser,
+    model::user::{dto::LoginRequestDto, vo::AuthResponseVo},
+    repository::RepositoryManager,
+    service::auth_controller::AuthController,
+    web::Result,
+};
+
+/// Public auth routes
+pub fn public() -> Router<AppState> {
+    Router::new()
+        .route("/login", post(login_handler))
+        .route("/refresh", post(refresh_handler))
+}
+
+/// Protected auth routes
+pub fn protected() -> Router<AppState> {
+    Router::new().route("/logout", post(logout_handler))
+    // .route("/me", get(me_handler))
+}
+
+/// Login with username and password.
+// TODO: #[tracing::instrument(name = "login", skip(pool, addr, headers, request))]
+async fn login_handler(
+    State(rm): State<RepositoryManager>,
+    State(app_config): State<Arc<AppConfig>>,
+    Json(request): Json<LoginRequestDto>,
+) -> Result<Json<AuthResponseVo>> {
+    tracing::debug!("{:<12} - login_handler", "HANDLER");
+
+    Ok(Json(
+        AuthController::login(&rm, request, &app_config.auth).await?,
+    ))
+}
+
+/// Refresh credentials and rotate tokens.
+// TODO: #[tracing::instrument(name = "refresh", skip(pool, addr, headers, request))]
+async fn refresh_handler(
+    State(rm): State<RepositoryManager>,
+    State(app_config): State<Arc<AppConfig>>,
+    request: Request,
+) -> Result<Json<AuthResponseVo>> {
+    tracing::debug!("{:<12} - refresh_handler", "HANDLER");
+
+    let (parts, body) = request.into_parts();
+
+    let token = parts
+        .headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok());
+
+    Ok(Json(
+        AuthController::refresh(&rm, token, &app_config.auth).await?,
+    ))
+}
+
+/// Logout user.
+// TODO: #[tracing::instrument(name = "logout", skip(pool, addr, headers, request))]
+async fn logout_handler(
+    State(rm): State<RepositoryManager>,
+    current_user: CurrentUser,
+) -> Result<()> {
+    tracing::debug!("{:<12} - logout_handler", "HANDLER");
+
+    Ok(AuthController::logout(&rm, &current_user.family_id).await?)
+}

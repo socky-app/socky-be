@@ -1,12 +1,11 @@
 use axum::{middleware, response::Html, routing::get, Router};
-use tower_cookies::CookieManagerLayer;
 
 use crate::{
     config::AppConfig,
     repository::RepositoryManager,
     web::{
-        middleware::{auth, request},
-        routes_login, routes_static, routes_transaction,
+        auth_router,
+        middleware::{auth_middleware, request_middleware},
     },
 };
 
@@ -17,23 +16,30 @@ pub use state::AppState;
 pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
     let state = AppState::new(rm, app_config);
 
-    let routes_api = routes_transaction::routes(state.clone()).route_layer(
-        middleware::from_fn_with_state(state.clone(), auth::auth_middleware),
-    );
+    // TODO: Configure CORS, see [here](https://github.com/idaibin/rustzen-admin/blob/main/src/core/app.rs)
+
+    let protected_api = Router::new()
+        .nest("/auth", auth_router::protected())
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ));
+
+    let public_api = Router::new()
+        .nest("/auth", auth_router::public())
+        .nest("/hello", routes_hello());
 
     Router::new()
-        .merge(routes_hello())
-        .merge(routes_login::routes())
-        .nest("/api", routes_api)
-        .layer(middleware::from_fn(request::request_middleware))
-        .layer(CookieManagerLayer::new())
-        .fallback_service(routes_static::serve_dir(&state.config.router))
+        .nest("/api", protected_api.merge(public_api))
+        .layer(middleware::from_fn(request_middleware)) // TODO: Implement logic to filter logs for dummy requests, maybe use TraceLayer
+        .with_state(state.clone())
+    // TODO: add fallback service returnin 404 and JSON body?
 }
 
 // TODO: Remove later
-fn routes_hello() -> Router {
+fn routes_hello() -> Router<AppState> {
     Router::new().route(
-        "/hello",
+        "/",
         get(|| async {
             tracing::debug!("{:<12} - hello", "HANDLER");
             Html("Hello <strong>World!!!</strong>")

@@ -3,6 +3,7 @@ use std::thread::AccessError;
 use secrecy::{ExposeSecret, SecretString};
 
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::{
     config::AuthConfig,
@@ -31,6 +32,7 @@ use crate::{
 pub enum AuthError {
     HashingFailed,
     InvalidLoginCredentials,
+    MissingToken,
     InvalidToken,
     ExpiredToken,
     RevokedToken,
@@ -162,10 +164,12 @@ impl AuthController {
     /// Refresh tokens.
     pub async fn refresh(
         rm: &RepositoryManager,
-        input_token: &str,
+        input_token: Option<&str>,
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         // 1. Hash incoming token
+        let input_token = input_token.ok_or(AuthError::MissingToken)?;
+
         let input_token_hash = hmac::hash_sha512(
             input_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
@@ -239,25 +243,11 @@ impl AuthController {
     /// Logout user.
     pub async fn logout(
         rm: &RepositoryManager,
-        refresh_token: &str,
-        auth_config: &AuthConfig,
+        family_id: &Uuid,
     ) -> Result<()> {
         tracing::trace!("Logout attempt received");
 
-        // 1. Hash incoming token
-        let token_hash = hmac::hash_sha512(
-            refresh_token.as_bytes(),
-            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
-        )
-        .map_err(AuthError::from)?;
-
-        // 2. Find the token to get its Family ID
-        // If it's already gone/invalid, we can just return Ok (idempotent)
-        if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
-            // 3. Revoke the entire Family
-            tracing::trace!("Revoking session family: {}", token_entity.family_id);
-            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
-        }
+        TokenRepository::revoke_family(rm, family_id).await?;
 
         tracing::trace!("Logout successful.");
         Ok(())
@@ -268,7 +258,7 @@ impl AuthController {
         token: Option<&str>,
         auth_config: &AuthConfig,
     ) -> Result<AccessClaims> {
-        let token = token.ok_or(AuthError::InvalidToken)?;
+        let token = token.ok_or(AuthError::MissingToken)?;
 
         Ok(token::validate_token::<AccessClaims>(
             token,
