@@ -17,7 +17,7 @@ pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerE
         .min_connections(config.min_conn)
         .acquire_timeout(Duration::from_secs(config.conn_timeout_seconds))
         .idle_timeout(Duration::from_secs(config.idle_timeout_seconds))
-        .connect(&config.url)
+        .connect(&config.url())
         .await
         .map_err(RepositoryManagerError::CreatePoolFailed)?;
 

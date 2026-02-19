@@ -31,7 +31,9 @@ impl fmt::Display for ConfigError {
         writeln!(f, "----------------------------------------------------")?;
         writeln!(f, "💡 TROUBLESHOOTING:")?;
         writeln!(f, "Ensure these Environment Variables are set (double __ for nesting):")?;
-        writeln!(f, "   - SOCKY_DB__URL")?;
+        writeln!(f, "   - SOCKY_DB__USER")?;
+        writeln!(f, "   - SOCKY_DB__PASSWORD")?;
+        writeln!(f, "   - SOCKY_DB__HOST")?;
         writeln!(f, "   - SOCKY_AUTH__PASSWORD_PEPPER")?;
         writeln!(f, "   - SOCKY_AUTH__ACCESS_TOKEN_SECRET")?;
         writeln!(f, "   - SOCKY_AUTH__REFRESH_TOKEN_SECRET")?;

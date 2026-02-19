@@ -37,7 +37,6 @@ impl From<Config> for (NetworkConfig, AppConfig, DbConfig) {
         )
     }
 }
-    
 
 #[derive(Debug)]
 pub struct AppConfig {
@@ -48,7 +47,7 @@ pub struct AppConfig {
 #[derive(Debug, Deserialize)]
 pub struct NetworkConfig {
     pub port: u16,
-    pub host: String
+    pub host: String,
 }
 
 impl NetworkConfig {
@@ -64,11 +63,23 @@ pub struct RouterConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct DbConfig {
-    pub url: String,
+    pub user: String,
+    pub password: String,
+    pub host: String,
+    pub name: String,
     pub max_conn: u32,
     pub min_conn: u32,
     pub conn_timeout_seconds: u64,
     pub idle_timeout_seconds: u64,
+}
+
+impl DbConfig {
+    pub fn url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}/{}",
+            self.user, self.password, self.host, self.name,
+        )
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -110,7 +121,5 @@ pub fn load_config() -> Result<Config, ConfigError> {
         // --- Environment Variables (With Nesting Support) ---
         // split("__") tells Figment that SOCKY_DB__URL means db.url
         .merge(Env::prefixed("SOCKY_").split("__"))
-        .extract::<Config>()?
-    )
+        .extract::<Config>()?)
 }
-
