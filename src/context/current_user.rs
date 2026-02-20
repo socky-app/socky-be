@@ -1,7 +1,5 @@
 use crate::{
-    service::ServiceError,
-    utils::token::{AccessClaims, Claims},
-    web::WebError,
+    model::user::UserRole, service::ServiceError, utils::token::{AccessClaims, Claims}, web::WebError
 };
 use axum::{extract::FromRequestParts, http::request::Parts};
 use serde::{Deserialize, Serialize};
@@ -11,12 +9,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurrentUser {
     pub user_id: i64,
+    pub user_role: UserRole,
     pub family_id: Uuid
 }
 
 impl CurrentUser {
-    pub fn new(user_id: i64, family_id: Uuid) -> Self {
-        Self { user_id, family_id}
+    pub fn new(user_id: i64, user_role: UserRole, family_id: Uuid) -> Self {
+        Self { user_id, user_role, family_id}
     }
 }
 
@@ -24,6 +23,7 @@ impl From<AccessClaims> for CurrentUser {
     fn from(value: AccessClaims) -> Self {
         Self {
             user_id: value.user_id(),
+            user_role: value.user_role(),
             family_id: *value.family_id(),
         }
     }

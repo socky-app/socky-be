@@ -52,6 +52,10 @@ impl AccessClaims {
     pub fn family_id(&self) -> &Uuid {
         &self.family_id
     }
+
+    pub fn user_role(&self) -> UserRole {
+        self.user_role
+    }
 }
 
 /// Represents the claims in the refresh token payload.
