@@ -106,8 +106,8 @@ impl AuthController {
         );
 
         // 2. Generate token pair
-        let tokens =
-            token::generate_tokens(credentials.user_id, auth_config).map_err(AuthError::from)?;
+        let tokens = token::generate_tokens(credentials.user_id, credentials.role, auth_config)
+            .map_err(AuthError::from)?;
         let refresh_token_hash = hmac::hash_sha512(
             tokens.refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
@@ -199,10 +199,14 @@ impl AuthController {
             return Err(AuthError::ExpiredToken.into());
         }
 
-        // 5. Generate new refresh token pair
+        // 5. Get user info
+        let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
+
+        // 6. Generate new refresh token pair
         // CRITICAL: We pass the EXISTING family_id to maintain the chain
         let new_tokens = token::generate_tokens_with_family_id(
-            token_entity.user_id,
+            user_info.id,
+            user_info.role,
             token_entity.family_id,
             auth_config,
         )
@@ -213,9 +217,6 @@ impl AuthController {
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
         )
         .map_err(AuthError::from)?;
-
-        // 6. Get user info
-        let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
 
         // 7. Rotate tokens in single DB transaction
         let create_dto = CreateRefreshTokenDto {
@@ -241,10 +242,7 @@ impl AuthController {
     }
 
     /// Logout user.
-    pub async fn logout(
-        rm: &RepositoryManager,
-        family_id: &Uuid,
-    ) -> Result<()> {
+    pub async fn logout(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
         tracing::trace!("Logout attempt received");
 
         TokenRepository::revoke_family(rm, family_id).await?;
@@ -303,7 +301,11 @@ impl AuthController {
                 PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
             })
             .await
-            .map_err(|_e| ServiceError::Internal("Password verification blocking thread failed to join".to_string()))?
+            .map_err(|_e| {
+                ServiceError::Internal(
+                    "Password verification blocking thread failed to join".to_string(),
+                )
+            })?
         };
 
         if !is_valid {
@@ -325,29 +327,17 @@ impl AuthController {
     }
 
     async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
-        tracing::trace!(user_id, "Starting to fetch comprehensive user info");
+        tracing::trace!("Starting to fetch logged user info for user_id={}", user_id);
 
         // Get user basic info
         let user: UserEntity = UserRepository::get(rm, user_id).await?;
 
-        tracing::trace!(
-            "User basic info retrieved for user_id={}, email={}",
-            user_id,
-            user.email
-        );
-
-        // TODO: Get user permissions, may update permissions cache, and retrieve
-        // any other attributes relevant to the logged user.
-
-        tracing::trace!(
-            "User info retrieved successfully for user_id={}, email={}",
-            user_id,
-            user.email
-        );
+        tracing::trace!("User info retrieved successfully for user_id={}", user_id,);
 
         Ok(LoggedUserInfoVo {
             id: user.user_id,
             email: user.email,
+            role: user.role,
         })
     }
 }

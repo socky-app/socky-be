@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::config::AuthConfig;
+use crate::{config::AuthConfig, model::user::UserRole};
 
 // Using a consistent algorithm throughout
 const SELECTED_ALGO: Algorithm = Algorithm::HS256;
@@ -26,16 +26,20 @@ pub enum TokenError {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccessClaims {
     user_id: i64,
-    family_id: Uuid,
+    user_role: UserRole,
+    // TODO: Check if the access claims should have this,
+    // or if this should be passed on the logout request payload
+    family_id: Uuid, 
     aud: String,
     exp: usize,
     iat: usize,
 }
 
 impl AccessClaims {
-    pub fn new(user_id: i64, family_id: Uuid, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+    pub fn new(user_id: i64, user_role: UserRole, family_id: Uuid, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
         AccessClaims {
             user_id,
+            user_role,
             family_id,
             aud: Self::AUDIENCE.to_string(),
             // Safe cast: Postgres/Chrono timestamps fit in usize on 64-bit systems
@@ -105,13 +109,14 @@ pub struct TokenPair {
 }
 
 /// Generate a pair of access and refresh tokens.
-pub fn generate_tokens(user_id: i64, config: &AuthConfig) -> Result<TokenPair, TokenError> {
-    generate_tokens_with_family_id(user_id, Uuid::new_v4(), config)
+pub fn generate_tokens(user_id: i64, user_role: UserRole, config: &AuthConfig) -> Result<TokenPair, TokenError> {
+    generate_tokens_with_family_id(user_id, user_role, Uuid::new_v4(), config)
 }
 
 /// Generate a pair of access and refresh tokens for a given family ID.
 pub fn generate_tokens_with_family_id(
     user_id: i64,
+    user_role: UserRole,
     family_id: Uuid,
     config: &AuthConfig,
 ) -> Result<TokenPair, TokenError> {
@@ -125,7 +130,7 @@ pub fn generate_tokens_with_family_id(
     let refresh_expires_at = now + refresh_duration;
 
     // 3. Create Claims
-    let access_claims = AccessClaims::new(user_id, family_id, now, access_expires_at);
+    let access_claims = AccessClaims::new(user_id, user_role, family_id, now, access_expires_at);
     let refresh_claims = RefreshClaims::new(user_id, family_id, now, refresh_expires_at);
 
     // 4. Encode

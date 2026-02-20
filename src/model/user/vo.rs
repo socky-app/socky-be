@@ -33,7 +33,7 @@ impl From<UserEntity> for UserVo {
 }
 
 /// Response payload for autheticated user.
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct AuthResponseVo {
     /// Token for authenticating subsequent requests
     pub access_token: String,
@@ -44,10 +44,12 @@ pub struct AuthResponseVo {
 }
 
 /// Comprehensive user information for authenticated sessions.
-#[derive(Debug, Default, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct LoggedUserInfoVo {
     /// Unique identifier of the user
     pub id: i64,
     /// Email of the user
     pub email: String,
+    /// Access role of the user
+    pub role: UserRole,
 }
