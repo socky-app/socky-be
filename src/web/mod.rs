@@ -3,6 +3,7 @@
 mod error;
 
 pub mod middleware;
+pub mod extractor;
 pub mod auth_router;
 pub mod routes_transaction;
 

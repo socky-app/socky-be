@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::{
-    model::user::error::UserError,
+    model::user::error::{UserError, UserRoleError},
     repository::RepositoryError,
     service::{auth_controller::AuthError, ServiceError},
 };
@@ -109,10 +109,6 @@ fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, Str
         },
 
         ServiceError::User(e) => match e {
-            UserError::InvalidUserStatus => (
-                StatusCode::BAD_REQUEST,
-                "User status is invalid.".to_string(),
-            ),
             UserError::UserIsDisabled => (
                 StatusCode::FORBIDDEN,
                 "User account is disabled.".to_string(),
@@ -126,6 +122,8 @@ fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, Str
                 "User account is locked.".to_string(),
             ),
         },
+
+        ServiceError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied".to_string()),
 
         ServiceError::CurrentUserExtractionError => (
             StatusCode::INTERNAL_SERVER_ERROR,
