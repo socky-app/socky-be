@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::model::user::error::UserError;
+use crate::model::user::error::UserStatusError;
 
 pub mod dto;
 pub mod error;
@@ -51,12 +51,12 @@ pub enum UserStatus {
 impl UserStatus {
     /// Checks if the user status allows login.
     /// Returns Ok(()) if allowed, or an appropriate UserError otherwise.
-    pub fn check_status(&self) -> Result<(), UserError> {
+    pub fn check_status(&self) -> Result<(), UserStatusError> {
         match self {
             UserStatus::Active => Ok(()),
-            UserStatus::Disabled => Err(UserError::UserIsDisabled),
-            UserStatus::Pending => Err(UserError::UserIsPending),
-            UserStatus::Locked => Err(UserError::UserIsLocked),
+            UserStatus::Disabled => Err(UserStatusError::Disabled),
+            UserStatus::Pending => Err(UserStatusError::Pending),
+            UserStatus::Locked => Err(UserStatusError::Locked),
         }
     }
 }

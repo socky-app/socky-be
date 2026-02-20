@@ -1,7 +1,9 @@
 use thiserror::Error;
 
 use crate::{
-    model::user::error::{UserError, UserRoleError}, repository::RepositoryError, service::auth_controller::AuthError,
+    model::user::error::{UserRoleError, UserStatusError},
+    repository::RepositoryError,
+    service::auth_controller::AuthError,
 };
 
 #[derive(Debug, Error, strum_macros::AsRefStr)]
@@ -14,7 +16,7 @@ pub enum ServiceError {
 
     // TODO: Rename to user status
     #[error("Invalid user error")]
-    User(#[from] UserError),
+    UserStatus(#[from] UserStatusError),
 
     #[error("Invalid user role")]
     UserRole(#[from] UserRoleError),

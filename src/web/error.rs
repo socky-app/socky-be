@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::{
-    model::user::error::{UserError, UserRoleError},
+    model::user::error::{UserRoleError, UserStatusError},
     repository::RepositoryError,
     service::{auth_controller::AuthError, ServiceError},
 };
@@ -108,16 +108,16 @@ fn get_status_code_and_message(service_error: &ServiceError) -> (StatusCode, Str
             ),
         },
 
-        ServiceError::User(e) => match e {
-            UserError::UserIsDisabled => (
+        ServiceError::UserStatus(e) => match e {
+            UserStatusError::Disabled => (
                 StatusCode::FORBIDDEN,
                 "User account is disabled.".to_string(),
             ),
-            UserError::UserIsPending => (
+            UserStatusError::Pending => (
                 StatusCode::BAD_REQUEST,
                 "User account is pending activation.".to_string(),
             ),
-            UserError::UserIsLocked => (
+            UserStatusError::Locked => (
                 StatusCode::BAD_REQUEST,
                 "User account is locked.".to_string(),
             ),

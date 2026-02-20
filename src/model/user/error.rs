@@ -2,13 +2,13 @@ use thiserror::Error;
 
 // TODO: rename to UserStatusError
 #[derive(Debug, Clone, Error)]
-pub enum UserError {
+pub enum UserStatusError {
     #[error("User is disabled")]
-    UserIsDisabled,
+    Disabled,
     #[error("User is pending")]
-    UserIsPending,
+    Pending,
     #[error("User is locked")]
-    UserIsLocked,
+    Locked,
 }
 #[derive(Debug, Clone, Error)]
 #[error("Required role: {required}, current role: {current}")]

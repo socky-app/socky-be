@@ -11,7 +11,7 @@ use crate::{
         refresh_token::CreateRefreshTokenDto,
         user::{
             dto::LoginRequestDto,
-            error::UserError,
+            error::UserStatusError,
             vo::{AuthResponseVo, LoggedUserInfoVo},
             LoginCredentialsEntity, UserEntity, UserStatus,
         },
