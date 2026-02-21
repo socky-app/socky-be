@@ -40,14 +40,17 @@ jsonwebtoken = "10.3.0"
 dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env"] }
 
+# Helper scripts
+rpassword = "7.4.0"
+
 # Others
 chrono = { version = "0.4.43", features = ["serde"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
-thiserror = "2.0.18"
-lazy-regex = "3.5.1"
 strum_macros = "0.27.2"
+thiserror = "2.0.18"
+anyhow = "1.0.102"
+lazy-regex = "3.6.0"
 
 [dev-dependencies]
-anyhow = "1.0.81"
 hex = "0.4.3"
 httpc-test = "0.1.9"

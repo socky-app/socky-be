@@ -1,28 +1,16 @@
 //! Entrypoint for the the Socky backend.
 
-use thiserror::Error;
+use anyhow::Result;
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
 
 use socky_be::{
-    config::{load_config, ConfigError},
+    config::load_config,
     create_app,
-    startup::{RepositoryManager, RepositoryManagerError},
+    repository::RepositoryManager,
 };
 
-#[derive(Debug, Error)]
-enum RunError {
-    #[error(transparent)]
-    Config(#[from] ConfigError),
-
-    #[error(transparent)]
-    Repository(#[from] RepositoryManagerError),
-
-    #[error(transparent)]
-    Network(#[from] std::io::Error),
-}
-
-async fn run() -> Result<(), RunError> {
+async fn run() -> Result<()> {
     // Load config
     let (net_config, app_config, db_config) = load_config()?.into();
 
