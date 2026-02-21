@@ -23,7 +23,8 @@ pub async fn auth_middleware(
     let token = parts
         .headers
         .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok());
+        .and_then(|value| value.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "));
 
     // Validate token
     let claims = AuthController::verify_access_token(token, &app_config.auth)?;
