@@ -3,12 +3,15 @@ use sqlx::QueryBuilder;
 
 use crate::{
     model::user::{
-        LoginCredentialsEntity, UserEntity, dto::{CreateUserDto, UpdateUserPasswordDto, UpdateUserStatusDto}
+        dto::{CreateUserDto, UpdateUserPasswordDto, UpdateUserStatusDto},
+        LoginCredentialsEntity, UserEntity, UserRole, UserStatus,
     },
     repository::{
-        RepositoryManager, Result, ops::{
-            DatabaseTable, create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update
-        }
+        ops::{
+            create, delete, delete_strategy::SoftDeleteStrategy, get, soft_delete, update,
+            DatabaseTable,
+        },
+        RepositoryManager, Result,
     },
 };
 
@@ -65,15 +68,27 @@ impl UserRepository {
         rm: &RepositoryManager,
         email: &str,
     ) -> Result<Option<LoginCredentialsEntity>> {
-        Ok(
-            sqlx::query_as::<_, LoginCredentialsEntity>("SELECT * FROM get_login_credentials($1)")
-                .bind(email)
-                .fetch_optional(rm.pool())
-                .await
-                .inspect_err(|e| {
-                    tracing::error!("Database error getting login credentials: {:?}", e);
-                })?,
+        let user = sqlx::query_as!(
+            LoginCredentialsEntity,
+            r#"
+            SELECT 
+                id, 
+                password_hash, 
+                role AS "role: UserRole", 
+                status AS "status: UserStatus"
+            FROM users 
+            WHERE email = $1 
+            AND deleted_at IS NULL
+            "#,
+            email
         )
+        .fetch_optional(rm.pool())
+        .await
+        .inspect_err(|e| {
+            tracing::error!("Database error getting login credentials: {:?}", e);
+        })?;
+
+        Ok(user)
     }
 
     /// Update last login timestamp
