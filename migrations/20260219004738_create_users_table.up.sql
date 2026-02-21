@@ -7,7 +7,7 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
 
     -- 1: standard, 2: support, 3: admin
-    role SMALLINT NOT NULL DEFAULT 1 CHECK (role IN (1, 2, 3));
+    role SMALLINT NOT NULL DEFAULT 1 CHECK (role IN (1, 2, 3)),
     
     -- 1: active, 2: disabled, 3: pending, 4: locked
     status SMALLINT NOT NULL DEFAULT 3 CHECK (status IN (1, 2, 3, 4)), 
