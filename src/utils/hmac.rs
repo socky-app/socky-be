@@ -7,7 +7,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use socky_be::common::hmac;
+//! use socky_be::utils::hmac;
 //!
 //! let secret = b"my secret";
 //! let msg = b"important message";
