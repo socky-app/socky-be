@@ -29,14 +29,19 @@ pub async fn auth_middleware(
     // Validate token
     let claims = AuthController::verify_access_token(token, &app_config.auth)?;
 
-    // Inject user into request extensions
+    // Create the user
     let current_user = CurrentUser::from(claims);
-    parts.extensions.insert(current_user);
+
+    // Insert into request extensions for dowstream handlers
+    parts.extensions.insert(current_user.clone());
 
     let request = Request::from_parts(parts, body);
-    let response = next.run(request).await;
+    let mut response = next.run(request).await;
 
     tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE<<");
+
+    // Insert into response extensions for upstream middleware
+    response.extensions_mut().insert(current_user);
 
     Ok(response)
 }

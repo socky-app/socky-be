@@ -7,7 +7,7 @@ use serde_with::skip_serializing_none;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::web::ErrorDetails;
+use crate::{context::CurrentUser, web::ErrorDetails};
 
 pub struct LogController;
 
@@ -16,7 +16,7 @@ impl LogController {
         uuid: String,
         method: String,
         uri: String,
-        // ctx: Option<Ctx>,
+        curr_user: Option<&CurrentUser>,
         error_details: Option<&ErrorDetails>,
     ) {
         let timestamp = SystemTime::now()
@@ -29,7 +29,7 @@ impl LogController {
             timestamp: timestamp.to_string(),
             uri,
             method,
-            user_id: Some(0), // TODO: Fix
+            user: curr_user.cloned(),
 
             client_message: error_details.map(|e| e.client_message.clone()),
             service_error_type: error_details.map(|e| e.error_type.clone()),
@@ -48,7 +48,7 @@ struct RequestLogLine {
     timestamp: String,
 
     // User and context attributes
-    user_id: Option<u64>,
+    user: Option<CurrentUser>,
 
     // HTTP request attributes
     uri: String,
