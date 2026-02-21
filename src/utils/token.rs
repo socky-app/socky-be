@@ -27,30 +27,22 @@ pub enum TokenError {
 pub struct AccessClaims {
     user_id: i64,
     user_role: UserRole,
-    // TODO: Check if the access claims should have this,
-    // or if this should be passed on the logout request payload
-    family_id: Uuid, 
     aud: String,
     exp: usize,
     iat: usize,
 }
 
 impl AccessClaims {
-    pub fn new(user_id: i64, user_role: UserRole, family_id: Uuid, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+    pub fn new(user_id: i64, user_role: UserRole, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
         AccessClaims {
             user_id,
             user_role,
-            family_id,
             aud: Self::AUDIENCE.to_string(),
             // Safe cast: Postgres/Chrono timestamps fit in usize on 64-bit systems
             // or just use u64/i64 for claims to be safe
             iat: iat.timestamp() as usize,
             exp: exp.timestamp() as usize,
         }
-    }
-
-    pub fn family_id(&self) -> &Uuid {
-        &self.family_id
     }
 
     pub fn user_role(&self) -> UserRole {
@@ -134,7 +126,7 @@ pub fn generate_tokens_with_family_id(
     let refresh_expires_at = now + refresh_duration;
 
     // 3. Create Claims
-    let access_claims = AccessClaims::new(user_id, user_role, family_id, now, access_expires_at);
+    let access_claims = AccessClaims::new(user_id, user_role, now, access_expires_at);
     let refresh_claims = RefreshClaims::new(user_id, family_id, now, refresh_expires_at);
 
     // 4. Encode

@@ -163,12 +163,10 @@ impl AuthController {
     /// Refresh tokens.
     pub async fn refresh(
         rm: &RepositoryManager,
-        input_token: Option<&str>, // TODO: review the logic here so that we don't need the optional
+        input_token: &str,
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         // 1. Hash incoming token
-        let input_token = input_token.ok_or(AuthError::MissingToken)?;
-
         let input_token_hash = hmac::hash_sha512(
             input_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
@@ -241,10 +239,24 @@ impl AuthController {
     }
 
     /// Logout user.
-    pub async fn logout(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
+    pub async fn logout(rm: &RepositoryManager, refresh_token: &str, auth_config: &AuthConfig,) -> Result<()> {
         tracing::trace!("Logout attempt received");
 
-        TokenRepository::revoke_family(rm, family_id).await?;
+        // 1. Hash incoming token
+        let token_hash = hmac::hash_sha512(
+            refresh_token.as_bytes(),
+            auth_config.refresh_token_pepper.expose_secret().as_bytes(),
+        )
+        .map_err(AuthError::from)?;
+
+        // 2. Find the token to get its Family ID
+        // If it's already gone/invalid, we can just return Ok (idempotent)
+        // TODO: This logic can be optimized and transformed into a single SQL query
+        if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
+            // 3. Revoke the entire Family
+            tracing::trace!("Revoking session family: {}", token_entity.family_id);
+            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
+        }
 
         tracing::trace!("Logout successful.");
         Ok(())

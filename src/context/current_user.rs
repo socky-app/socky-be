@@ -13,15 +13,13 @@ use uuid::Uuid;
 pub struct CurrentUser {
     pub id: i64,
     pub role: UserRole,
-    pub family_id: Uuid,
 }
 
 impl CurrentUser {
-    pub fn new(id: i64, role: UserRole, family_id: Uuid) -> Self {
+    pub fn new(id: i64, role: UserRole) -> Self {
         Self {
             id,
             role,
-            family_id,
         }
     }
 }
@@ -31,7 +29,6 @@ impl From<AccessClaims> for CurrentUser {
         Self {
             id: value.user_id(),
             role: value.user_role(),
-            family_id: *value.family_id(),
         }
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     config::AppConfig,
     context::CurrentUser,
     model::user::{
-        dto::LoginRequestDto,
+        dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto},
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },
     repository::RepositoryManager,
@@ -26,12 +26,12 @@ pub fn public() -> Router<AppState> {
     Router::new()
         .route("/login", post(login_handler))
         .route("/refresh", post(refresh_handler))
+        .route("/logout", post(logout_handler))
 }
 
 /// Protected auth routes
 pub fn protected() -> Router<AppState> {
     Router::new()
-        .route("/logout", post(logout_handler))
         .route("/me", get(me_handler))
 }
 
@@ -54,19 +54,12 @@ async fn login_handler(
 async fn refresh_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
-    request: Request,
+    Json(request): Json<RefreshRequestDto>,
 ) -> Result<Json<AuthResponseVo>> {
     tracing::debug!("{:<12} - refresh_handler", "HANDLER");
 
-    let (parts, body) = request.into_parts();
-
-    let token = parts
-        .headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok());
-
     Ok(Json(
-        AuthController::refresh(&rm, token, &app_config.auth).await?,
+        AuthController::refresh(&rm, &request.refresh_token, &app_config.auth).await?,
     ))
 }
 
@@ -74,11 +67,12 @@ async fn refresh_handler(
 // TODO: #[tracing::instrument(name = "logout", skip(pool, addr, headers, request))]
 async fn logout_handler(
     State(rm): State<RepositoryManager>,
-    current_user: CurrentUser,
+    State(app_config): State<Arc<AppConfig>>,
+    Json(request): Json<LogoutRequestDto>,
 ) -> Result<()> {
     tracing::debug!("{:<12} - logout_handler", "HANDLER");
 
-    Ok(AuthController::logout(&rm, &current_user.family_id).await?)
+    Ok(AuthController::logout(&rm, &request.refresh_token, &app_config.auth).await?)
 }
 
 /// Get user information.

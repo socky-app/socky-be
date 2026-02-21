@@ -20,6 +20,18 @@ pub struct LoginRequestDto {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct RefreshRequestDto {
+    /// Refresh token
+    pub refresh_token: String,
+}
+
+#[derive(Deserialize)]
+pub struct LogoutRequestDto {
+    /// Refresh token
+    pub refresh_token: String,
+}
+
 /// Update user request parameters.
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateUserStatusDto {
