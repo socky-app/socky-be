@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-// TODO: rename to UserStatusError
 #[derive(Debug, Clone, Error)]
 pub enum UserStatusError {
     #[error("User is disabled")]

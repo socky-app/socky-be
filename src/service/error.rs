@@ -14,7 +14,6 @@ pub enum ServiceError {
     #[error("Auth error")]
     Auth(#[from] AuthError),
 
-    // TODO: Rename to user status
     #[error("Invalid user error")]
     UserStatus(#[from] UserStatusError),
 
