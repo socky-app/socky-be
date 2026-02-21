@@ -21,18 +21,18 @@ where
         let user = CurrentUser::from_request_parts(parts, state).await?;
 
         // 2. Cast the user's role enum to i16 and compare it to the generic requirement
-        if (user.user_role as i16) >= MIN_ROLE {
+        if (user.role as i16) >= MIN_ROLE {
             Ok(RequireRole(user))
         } else {
             tracing::warn!(
                 "User {} (role: {:?}) blocked from route requiring role level: {}",
-                user.user_id,
-                user.user_role as i16,
+                user.id,
+                user.role as i16,
                 MIN_ROLE
             );
             Err(WebError::from(ServiceError::UserRole(UserRoleError {
                 required: MIN_ROLE,
-                current: user.user_role as i16,
+                current: user.role as i16,
             })))
         }
     }

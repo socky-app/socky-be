@@ -21,7 +21,7 @@ pub type UserOptionVo = Option<i64>;
 impl From<UserEntity> for UserVo {
     fn from(user: UserEntity) -> Self {
         Self {
-            id: user.user_id,
+            id: user.id,
             email: user.email,
             role: user.role,
             status: user.status,

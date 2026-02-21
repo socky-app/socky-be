@@ -100,13 +100,13 @@ impl AuthController {
 
         let verification_time = start.elapsed();
         tracing::trace!(
-            "User verification completed in {:?} for user_id={}",
+            "User verification completed in {:?} for id={}",
             verification_time,
-            credentials.user_id
+            credentials.id
         );
 
         // 2. Generate token pair
-        let tokens = token::generate_tokens(credentials.user_id, credentials.role, auth_config)
+        let tokens = token::generate_tokens(credentials.id, credentials.role, auth_config)
             .map_err(AuthError::from)?;
         let refresh_token_hash = hmac::hash_sha512(
             tokens.refresh_token.as_bytes(),
@@ -115,21 +115,21 @@ impl AuthController {
         .map_err(AuthError::from)?;
 
         tracing::trace!(
-            "Tokens generated successfully for user_id={}",
-            credentials.user_id
+            "Tokens generated successfully for id={}",
+            credentials.id
         );
 
         // 3. Get user info
-        let user_info = Self::get_login_info(rm, credentials.user_id).await?;
+        let user_info = Self::get_login_info(rm, credentials.id).await?;
 
         tracing::trace!(
-            "User info retrieved successfully for user_id={}",
-            credentials.user_id
+            "User info retrieved successfully for id={}",
+            credentials.id
         );
 
         // 4. Store refresh token
         let create_dto = CreateRefreshTokenDto {
-            user_id: credentials.user_id,
+            user_id: credentials.id,
             family_id: tokens.family_id,
             token_hash: &refresh_token_hash,
             expires_at: tokens.refresh_expires_at,
@@ -139,17 +139,16 @@ impl AuthController {
         // 5. Update last login time (fire & forget)
         {
             let rm_clone = rm.clone();
-            let user_id_clone = credentials.user_id;
             tokio::spawn(async move {
-                let _ = UserRepository::update_last_login(&rm_clone, user_id_clone).await;
+                let _ = UserRepository::update_last_login(&rm_clone, credentials.id).await;
             });
         }
 
         let total_time = start.elapsed();
         tracing::trace!(
-            "Login successful for email={}, user_id={}, total_time={:?}",
+            "Login successful for email={}, id={}, total_time={:?}",
             &request.email,
-            credentials.user_id,
+            credentials.id,
             total_time
         );
 
@@ -280,9 +279,9 @@ impl AuthController {
             .ok_or(AuthError::InvalidLoginCredentials)?;
 
         tracing::trace!(
-            "User found for email={}, user_id={}, status={:?}",
+            "User found for email={}, id={}, status={:?}",
             email,
-            user.user_id,
+            user.id,
             user.status
         );
 
@@ -310,32 +309,32 @@ impl AuthController {
 
         if !is_valid {
             tracing::warn!(
-                "Invalid login attempt: password verification failed for email={}, user_id={}",
+                "Invalid login attempt: password verification failed for email={}, id={}",
                 email,
-                user.user_id
+                user.id
             );
             return Err(AuthError::InvalidLoginCredentials.into());
         }
 
         tracing::trace!(
-            "Login verification successful for email={}, user_id={}",
+            "Login verification successful for email={}, id={}",
             email,
-            user.user_id
+            user.id
         );
 
         Ok(user)
     }
 
     async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
-        tracing::trace!("Starting to fetch logged user info for user_id={}", user_id);
+        tracing::trace!("Starting to fetch logged user info for id={}", user_id);
 
         // Get user basic info
         let user: UserEntity = UserRepository::get(rm, user_id).await?;
 
-        tracing::trace!("User info retrieved successfully for user_id={}", user_id,);
+        tracing::trace!("User info retrieved successfully for id={}", user_id,);
 
         Ok(LoggedUserInfoVo {
-            id: user.user_id,
+            id: user.id,
             email: user.email,
             role: user.role,
         })

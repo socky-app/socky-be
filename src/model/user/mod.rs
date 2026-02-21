@@ -10,7 +10,7 @@ pub mod vo;
 /// User definition.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserEntity {
-    pub user_id: i64,
+    pub id: i64,
     pub email: String,
     pub password_hash: String,
     pub role: UserRole,
@@ -23,7 +23,7 @@ pub struct UserEntity {
 /// Minimal user info for login.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct LoginCredentialsEntity {
-    pub user_id: i64,
+    pub id: i64,
     pub password_hash: String,
     pub role: UserRole,
     pub status: UserStatus,

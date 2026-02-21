@@ -68,14 +68,14 @@ async fn main() -> Result<()> {
         role: UserRole::Admin,
         status: UserStatus::Active,
     };
-    let user_id = UserRepository::create(&rm, &dto)
+    let admin_id = UserRepository::create(&rm, &dto)
         .await
         .context("Failed to insert the new admin user")?;
 
     tracing::info!(
         "✅ Successfully created admin user '{}' with ID: {}",
         email,
-        user_id
+        admin_id
     );
 
     Ok(())
