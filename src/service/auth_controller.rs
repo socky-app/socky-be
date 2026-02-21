@@ -163,7 +163,7 @@ impl AuthController {
     /// Refresh tokens.
     pub async fn refresh(
         rm: &RepositoryManager,
-        input_token: Option<&str>,
+        input_token: Option<&str>, // TODO: review the logic here so that we don't need the optional
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         // 1. Hash incoming token
@@ -252,7 +252,7 @@ impl AuthController {
 
     /// Verify if the access token is valid.
     pub fn verify_access_token(
-        token: Option<&str>,
+        token: Option<&str>, // TODO: review the logic here so that we don't need the optional
         auth_config: &AuthConfig,
     ) -> Result<AccessClaims> {
         let token = token.ok_or(AuthError::MissingToken)?;
@@ -325,7 +325,7 @@ impl AuthController {
         Ok(user)
     }
 
-    async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
+    pub async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
         tracing::trace!("Starting to fetch logged user info for id={}", user_id);
 
         // Get user basic info

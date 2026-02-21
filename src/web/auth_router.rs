@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Request, State},
     http::header,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use serde_json::json;
@@ -12,7 +12,10 @@ use crate::{
     app::AppState,
     config::AppConfig,
     context::CurrentUser,
-    model::user::{dto::LoginRequestDto, vo::AuthResponseVo},
+    model::user::{
+        dto::LoginRequestDto,
+        vo::{AuthResponseVo, LoggedUserInfoVo},
+    },
     repository::RepositoryManager,
     service::auth_controller::AuthController,
     web::Result,
@@ -27,8 +30,9 @@ pub fn public() -> Router<AppState> {
 
 /// Protected auth routes
 pub fn protected() -> Router<AppState> {
-    Router::new().route("/logout", post(logout_handler))
-    // .route("/me", get(me_handler))
+    Router::new()
+        .route("/logout", post(logout_handler))
+        .route("/me", get(me_handler))
 }
 
 /// Login with email and password.
@@ -75,4 +79,17 @@ async fn logout_handler(
     tracing::debug!("{:<12} - logout_handler", "HANDLER");
 
     Ok(AuthController::logout(&rm, &current_user.family_id).await?)
+}
+
+/// Get user information.
+// TODO: #[tracing::instrument(name = "me", skip(pool, addr, headers, request))]
+async fn me_handler(
+    State(rm): State<RepositoryManager>,
+    current_user: CurrentUser,
+) -> Result<Json<LoggedUserInfoVo>> {
+    tracing::debug!("{:<12} - me_handler", "HANDLER");
+
+    Ok(Json(
+        AuthController::get_login_info(&rm, current_user.id).await?,
+    ))
 }
