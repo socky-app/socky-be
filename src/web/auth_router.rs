@@ -31,8 +31,7 @@ pub fn public() -> Router<AppState> {
 
 /// Protected auth routes
 pub fn protected() -> Router<AppState> {
-    Router::new()
-        .route("/me", get(me_handler))
+    Router::new().route("/me", get(me_handler))
 }
 
 /// Login with email and password.
@@ -42,7 +41,7 @@ async fn login_handler(
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<LoginRequestDto>,
 ) -> Result<Json<AuthResponseVo>> {
-    tracing::debug!("{:<12} - login_handler", "HANDLER");
+    tracing::debug!("{:<15} - login_handler", "HANDLER");
 
     Ok(Json(
         AuthController::login(&rm, request, &app_config.auth).await?,
@@ -56,7 +55,7 @@ async fn refresh_handler(
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<RefreshRequestDto>,
 ) -> Result<Json<AuthResponseVo>> {
-    tracing::debug!("{:<12} - refresh_handler", "HANDLER");
+    tracing::debug!("{:<15} - refresh_handler", "HANDLER");
 
     Ok(Json(
         AuthController::refresh(&rm, &request.refresh_token, &app_config.auth).await?,
@@ -70,7 +69,7 @@ async fn logout_handler(
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<LogoutRequestDto>,
 ) -> Result<()> {
-    tracing::debug!("{:<12} - logout_handler", "HANDLER");
+    tracing::debug!("{:<15} - logout_handler", "HANDLER");
 
     Ok(AuthController::logout(&rm, &request.refresh_token, &app_config.auth).await?)
 }
@@ -81,7 +80,7 @@ async fn me_handler(
     State(rm): State<RepositoryManager>,
     current_user: CurrentUser,
 ) -> Result<Json<LoggedUserInfoVo>> {
-    tracing::debug!("{:<12} - me_handler", "HANDLER");
+    tracing::debug!("{:<15} - me_handler", "HANDLER");
 
     Ok(Json(
         AuthController::get_login_info(&rm, current_user.id).await?,

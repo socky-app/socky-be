@@ -41,7 +41,7 @@ fn routes_hello() -> Router<AppState> {
     Router::new().route(
         "/",
         get(|| async {
-            tracing::debug!("{:<12} - hello", "HANDLER");
+            tracing::debug!("{:<15} - hello", "HANDLER");
             Html("Hello <strong>World!!!</strong>")
         }),
     )

@@ -26,7 +26,7 @@ impl From<ServiceError> for WebError {
 
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
-        tracing::debug!("{:<12} - {self}", "INTO_RES");
+        tracing::debug!("{:<15} - {self}", "INTO_RES");
 
         let service_error = self.0;
 

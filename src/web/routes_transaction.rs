@@ -25,7 +25,7 @@ async fn create_transaction(
     State(_mc): State<RepositoryManager>,
     Json(_transaction_fc): Json<CreateTransactionDto>,
 ) -> Result<Json<TransactionVo>> {
-    tracing::debug!("{:<12} - create_transaction", "HANDLER");
+    tracing::debug!("{:<15} - create_transaction", "HANDLER");
 
     todo!()
 }
@@ -33,7 +33,7 @@ async fn create_transaction(
 async fn list_transactions(
     State(_mc): State<RepositoryManager>,
 ) -> Result<Json<Vec<TransactionVo>>> {
-    tracing::debug!("{:<12} - list_transactions", "HANDLER");
+    tracing::debug!("{:<15} - list_transactions", "HANDLER");
 
     todo!()
 }
@@ -42,7 +42,7 @@ async fn delete_transaction(
     State(_mc): State<RepositoryManager>,
     Path(_id): Path<i64>,
 ) -> Result<Json<()>> {
-    tracing::debug!("{:<12} - delete_transaction", "HANDLER");
+    tracing::debug!("{:<15} - delete_transaction", "HANDLER");
 
     todo!()
 }
@@ -51,7 +51,7 @@ async fn get_transaction(
     State(_mc): State<RepositoryManager>,
     Path(_id): Path<i64>,
 ) -> Result<Json<TransactionVo>> {
-    tracing::debug!("{:<12} - get_transaction", "HANDLER");
+    tracing::debug!("{:<15} - get_transaction", "HANDLER");
 
     todo!()
 }

@@ -36,7 +36,7 @@ impl LogController {
             service_error_data: error_details.map(|e| e.error_data.clone()),
         };
 
-        tracing::info!("{:<12}\n{}", "REQUEST LOG LINE", json!(log_line));
+        tracing::info!("{:<15} - {}\n", "LOG LINE", json!(log_line));
     }
 }
 

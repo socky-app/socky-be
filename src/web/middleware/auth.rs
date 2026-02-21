@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    config::AppConfig, context::CurrentUser, service::auth_controller::AuthController, web::Result
+    config::AppConfig, context::CurrentUser, service::auth_controller::AuthController, web::Result,
 };
 
 pub async fn auth_middleware(
@@ -16,7 +16,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response> {
-    tracing::debug!("{:<12} - auth_middleware", "MIDDLEWARE >>");
+    tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE>>");
 
     let (mut parts, body) = request.into_parts();
 
@@ -36,7 +36,7 @@ pub async fn auth_middleware(
     let request = Request::from_parts(parts, body);
     let response = next.run(request).await;
 
-    tracing::debug!("{:<12} - auth_middleware", "MIDDLEWARE <<");
+    tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE<<");
 
     Ok(response)
 }
