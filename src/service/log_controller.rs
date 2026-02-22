@@ -1,6 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::http::{Method, Uri};
 use serde::Serialize;
 use serde_json::{json, Value};
 use serde_with::skip_serializing_none;

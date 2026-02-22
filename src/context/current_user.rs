@@ -1,10 +1,7 @@
 use crate::{
     model::user::UserRole,
-    service::ServiceError,
     utils::token::{AccessClaims, Claims},
-    web::WebError,
 };
-use axum::{extract::FromRequestParts, http::request::Parts};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
