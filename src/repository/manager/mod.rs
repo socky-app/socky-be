@@ -13,6 +13,15 @@ pub enum RepositoryManagerError {
     ConnectionFailed(sqlx::Error),
 }
 
+impl RepositoryManagerError {
+    pub fn inner(&self) -> &sqlx::Error {
+        match self {
+            RepositoryManagerError::CreatePoolFailed(error) => error,
+            RepositoryManagerError::ConnectionFailed(error) => error,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct RepositoryManager {
     pool: PgPool,

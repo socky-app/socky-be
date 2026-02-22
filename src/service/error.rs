@@ -14,7 +14,7 @@ pub enum ServiceError {
     #[error("Auth error")]
     Auth(#[from] AuthError),
 
-    #[error("Invalid user error")]
+    #[error("Invalid user status")]
     UserStatus(#[from] UserStatusError),
 
     #[error("Invalid user role")]
