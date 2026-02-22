@@ -9,5 +9,5 @@ pub mod health_router;
 
 pub mod transaction_router;
 
-pub use error::{ErrorDetails, WebError};
+pub use error::WebError;
 pub(in crate::web) type Result<T> = core::result::Result<T, WebError>;

@@ -32,26 +32,3 @@ impl From<AccessClaims> for CurrentUser {
         }
     }
 }
-
-/// Axum extractor for CurrentUser
-///
-/// Usage: async fn handler(current_user: CurrentUser) -> Response
-impl<S> FromRequestParts<S> for CurrentUser
-where
-    S: Send + Sync,
-{
-    type Rejection = WebError;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<CurrentUser>()
-            .cloned()
-            .ok_or_else(|| {
-                tracing::error!(
-                    "CurrentUser not found - auth middleware missing or user not authenticated"
-                );
-                WebError::from(ServiceError::CurrentUserExtractionError)
-            })
-    }
-}

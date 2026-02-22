@@ -30,10 +30,10 @@ where
                 user.role as i16,
                 MIN_ROLE
             );
-            Err(WebError::from(ServiceError::UserRole(UserRoleError {
+            Err(WebError::UserRole(UserRoleError {
                 required: MIN_ROLE,
                 current: user.role as i16,
-            })))
+            }))
         }
     }
 }

@@ -1,12 +1,12 @@
 use thiserror::Error;
 
 use crate::{
-    model::user::error::{UserRoleError, UserStatusError},
+    model::user::error::UserStatusError,
     repository::RepositoryError,
     service::auth_controller::AuthError,
 };
 
-#[derive(Debug, Error, strum_macros::AsRefStr)]
+#[derive(Debug, Error)]
 pub enum ServiceError {
     #[error("Repository error: {0}")]
     Repository(#[from] RepositoryError),
@@ -14,14 +14,8 @@ pub enum ServiceError {
     #[error("Auth error")]
     Auth(#[from] AuthError),
 
-    #[error("Invalid user status")]
+    #[error("Invalid status: {0}")]
     UserStatus(#[from] UserStatusError),
-
-    #[error("Invalid user role")]
-    UserRole(#[from] UserRoleError),
-
-    #[error("Current user not in request parts")]
-    CurrentUserExtractionError,
 
     #[error("Internal server error: {0}")]
     Internal(String),

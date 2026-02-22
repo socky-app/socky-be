@@ -7,7 +7,7 @@ use serde_with::skip_serializing_none;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::{context::CurrentUser, web::ErrorDetails};
+use crate::context::{CurrentUser, ErrorDetails};
 
 pub struct LogController;
 
@@ -32,8 +32,8 @@ impl LogController {
             user: curr_user.cloned(),
 
             client_message: error_details.map(|e| e.client_message.clone()),
-            service_error_type: error_details.map(|e| e.error_type.clone()),
-            service_error_data: error_details.map(|e| e.error_data.clone()),
+            error_type: error_details.map(|e| e.error_type.clone()),
+            error_data: error_details.map(|e| e.error_data.clone()),
         };
 
         tracing::info!("{:<15} - {}\n", "LOG LINE", json!(log_line));
@@ -56,6 +56,6 @@ struct RequestLogLine {
 
     // Error attributes
     client_message: Option<String>,
-    service_error_type: Option<String>,
-    service_error_data: Option<String>,
+    error_type: Option<String>,
+    error_data: Option<String>,
 }
