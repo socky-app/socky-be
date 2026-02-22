@@ -1,13 +1,12 @@
 use thiserror::Error;
 
 use crate::{
-    model::user::error::UserStatusError,
-    repository::RepositoryError,
-    service::auth_controller::AuthError,
+    model::user::error::UserStatusError, repository::RepositoryError,
+    controller::auth_controller::AuthError,
 };
 
 #[derive(Debug, Error)]
-pub enum ServiceError {
+pub enum ControllerError {
     #[error("Repository error: {0}")]
     Repository(#[from] RepositoryError),
 

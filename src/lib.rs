@@ -9,7 +9,7 @@ pub mod utils;
 
 mod app;
 mod context;
-mod service;
+mod controller;
 mod web;
 
 // Re-export create_app function

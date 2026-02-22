@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    config::AppConfig, context::CurrentUser, service::auth_controller::AuthController, web::Result,
+    config::AppConfig, context::CurrentUser, controller::auth_controller::AuthController, web::Result,
 };
 
 pub async fn auth_middleware(

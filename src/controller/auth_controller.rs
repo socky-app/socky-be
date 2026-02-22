@@ -20,7 +20,7 @@ use crate::{
         token_repo::TokenRepository, user_repo::UserRepository, Create, Get, RepositoryError,
         RepositoryManager,
     },
-    service::{Result, ServiceError},
+    controller::{Result, ControllerError},
     utils::{
         hmac,
         password::{PasswordError, PasswordUtils},
@@ -313,7 +313,7 @@ impl AuthController {
             })
             .await
             .map_err(|_e| {
-                ServiceError::Internal(
+                ControllerError::Internal(
                     "Password verification blocking thread failed to join".to_string(),
                 )
             })?

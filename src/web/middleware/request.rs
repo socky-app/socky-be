@@ -9,7 +9,7 @@ use serde_json::json;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::{context::{CurrentUser, ErrorDetails}, service::log_controller::LogController};
+use crate::{context::{CurrentUser, ErrorDetails}, controller::log_controller::LogController};
 
 pub async fn request_middleware(mut request: Request, next: Next) -> Response {
     debug!("{:<15} - request_middleware", "MIDDLEWARE>>"); // TODO: use spans for logging

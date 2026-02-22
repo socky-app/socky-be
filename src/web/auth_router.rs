@@ -17,7 +17,7 @@ use crate::{
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },
     repository::RepositoryManager,
-    service::auth_controller::AuthController,
+    controller::auth_controller::AuthController,
     web::Result,
 };
 

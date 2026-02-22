@@ -8,19 +8,22 @@ use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::{
-    context::ErrorDetails, model::user::error::{UserRoleError, UserStatusError}, repository::RepositoryError, service::{ServiceError, auth_controller::AuthError}
+    context::ErrorDetails,
+    model::user::error::{UserRoleError, UserStatusError},
+    repository::RepositoryError,
+    controller::{auth_controller::AuthError, ControllerError},
 };
 
 /// Web error.
 #[derive(Debug, Error, strum_macros::AsRefStr)]
 pub enum WebError {
-    #[error(transparent)]
-    Service(#[from] ServiceError),
+    #[error("Controller: {0}")]
+    Service(#[from] ControllerError),
 
     #[error("Current user missing in request parts")]
     UserExtraction,
 
-    #[error("Insuficient permission: ")]
+    #[error("Insuficient permission: {0}")]
     UserRole(#[from] UserRoleError),
 }
 
@@ -60,7 +63,7 @@ struct ClientError {
 fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
     match error {
         WebError::Service(service_error) => match service_error {
-            ServiceError::Repository(e) => match e {
+            ControllerError::Repository(e) => match e {
                 RepositoryError::NotFound { entity, id } => {
                     (StatusCode::NOT_FOUND, "Resource not found".to_string())
                 }
@@ -70,7 +73,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 ),
             },
 
-            ServiceError::Auth(e) => match e {
+            ControllerError::Auth(e) => match e {
                 AuthError::HashingFailed => (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Authentication processing failed.".to_string(),
@@ -92,7 +95,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 ),
             },
 
-            ServiceError::UserStatus(e) => match e {
+            ControllerError::UserStatus(e) => match e {
                 UserStatusError::Disabled => (
                     StatusCode::FORBIDDEN,
                     "User account is disabled.".to_string(),
@@ -107,20 +110,17 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 ),
             },
 
-            ServiceError::Internal(_) => (
+            ControllerError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),
             ),
-        }
+        },
 
         WebError::UserExtraction => (
             StatusCode::UNAUTHORIZED,
             "You must be logged in to access this resource.".to_string(),
         ),
 
-        WebError::UserRole(_) => (
-            StatusCode::FORBIDDEN,
-            "Permission denied".to_string(),
-        ),
+        WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied".to_string()),
     }
 }

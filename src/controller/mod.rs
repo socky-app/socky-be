@@ -5,5 +5,5 @@ pub mod auth_controller;
 pub mod log_controller;
 
 // Re-export module error and result.
-pub use error::ServiceError;
-pub(in crate::service) type Result<T> = core::result::Result<T, ServiceError>;
+pub use error::ControllerError;
+pub(in crate::controller) type Result<T> = core::result::Result<T, ControllerError>;
