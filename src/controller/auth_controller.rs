@@ -31,7 +31,8 @@ use crate::{
 #[derive(Debug, Error)]
 pub enum AuthError {
     HashingFailed,
-    InvalidLoginCredentials,
+    InvalidEmail,
+    InvalidPassword,
     MissingToken,
     InvalidToken,
     ExpiredToken,
@@ -288,7 +289,7 @@ impl AuthController {
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, email)
             .await?
-            .ok_or(AuthError::InvalidLoginCredentials)?;
+            .ok_or(AuthError::InvalidEmail)?;
 
         tracing::trace!(
             "User found for email={}, id={}, status={:?}",
@@ -320,12 +321,7 @@ impl AuthController {
         };
 
         if !is_valid {
-            tracing::warn!(
-                "Invalid login attempt: password verification failed for email={}, id={}",
-                email,
-                user.id
-            );
-            return Err(AuthError::InvalidLoginCredentials.into());
+            return Err(AuthError::InvalidPassword.into());
         }
 
         tracing::trace!(

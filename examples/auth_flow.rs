@@ -25,8 +25,8 @@ async fn main() -> Result<()> {
     let login_res = client
         .post(format!("{BASE_URL}/api/auth/login"))
         .json(&json!({
-                "email": "admin@socky.com",
-                "password": "123"
+                "email": "test@socky.com",
+                "password": "test"
         }))
         .send()
         .await?;

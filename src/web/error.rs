@@ -78,7 +78,8 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Authentication processing failed.".to_string(),
                 ),
-                AuthError::InvalidLoginCredentials => (
+                AuthError::InvalidEmail
+                | AuthError::InvalidPassword => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid email or password.".to_string(),
                 ),
