@@ -1,4 +1,4 @@
-use std::fmt::format;
+use std::{error::Error, fmt::format};
 
 use axum::{
     http::StatusCode,
@@ -52,10 +52,19 @@ impl IntoResponse for WebError {
             message: client_message.clone(),
         };
 
+        // Build the error data
+        let mut error_data = format!("{:?}", self);
+        let mut current_source = self.source();
+
+        while let Some(cause) = current_source {
+            error_data.push_str(&format!("\n  Caused by: {}", cause));
+            current_source = cause.source();
+        }
+
         // Build the Error Details
         let details = ErrorDetails {
             error_type: self.error_type(),
-            error_data: format!("{:?}", self), // TODO: Fix error data handling
+            error_data,
             client_message,
         };
 
