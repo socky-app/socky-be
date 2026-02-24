@@ -55,7 +55,7 @@ impl IntoResponse for WebError {
         // Build the Error Details
         let details = ErrorDetails {
             error_type: self.error_type(),
-            error_data: format!("{:?}", self),
+            error_data: format!("{:?}", self), // TODO: Fix error data handling
             client_message,
         };
 
@@ -88,18 +88,19 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
             },
 
             ControllerError::Auth(e) => match e {
-                AuthError::HashingFailed => (
+                AuthError::HashingFailed(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "An unexpected internal error occurred.".to_string(),
                 ),
-                AuthError::InvalidEmail | AuthError::InvalidPassword => (
+                AuthError::InvalidEmail {..} | AuthError::InvalidPassword {..} => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid email or password.".to_string(),
                 ),
                 AuthError::MissingToken
+                | AuthError::NotFoundToken
                 | AuthError::InvalidToken
                 | AuthError::ExpiredToken
-                | AuthError::RevokedToken => (
+                | AuthError::RevokedToken {..} => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid or expired token.".to_string(),
                 ),

@@ -7,29 +7,48 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    common::ErrorType, config::AuthConfig, controller::{ControllerError, Result}, model::{
+    common::ErrorType,
+    config::AuthConfig,
+    controller::{ControllerError, Result},
+    model::{
         refresh_token::CreateRefreshTokenDto,
         user::{
-            LoginCredentialsEntity, UserEntity, UserStatus, dto::LoginRequestDto, error::UserStatusError, vo::{AuthResponseVo, LoggedUserInfoVo}
+            dto::LoginRequestDto,
+            error::UserStatusError,
+            vo::{AuthResponseVo, LoggedUserInfoVo},
+            LoginCredentialsEntity, UserEntity, UserStatus,
         },
-    }, repository::{
-        Create, Get, RepositoryError, RepositoryManager, token_repo::TokenRepository, user_repo::UserRepository
-    }, utils::{
+    },
+    repository::{
+        token_repo::TokenRepository, user_repo::UserRepository, Create, Get, RepositoryError,
+        RepositoryManager,
+    },
+    utils::{
         hmac,
         password::{PasswordError, PasswordUtils},
         token::{self, AccessClaims, TokenError},
-    }
+    },
 };
 
 #[derive(Debug, Error, AsRefStr)]
 pub enum AuthError {
-    HashingFailed,
-    InvalidEmail,
-    InvalidPassword,
+    HashingFailed(String),
+    InvalidEmail {
+        email: String,
+    },
+    InvalidPassword {
+        user_id: i64,
+        email: String,
+    },
     MissingToken,
+    NotFoundToken,
     InvalidToken,
-    ExpiredToken,
-    RevokedToken,
+    ExpiredToken, // TODO: Add user_id and other info to expired token entity
+    RevokedToken {
+        token_id: i64,
+        user_id: i64,
+        family_id: Uuid,
+    },
     TokenCreationFailed,
 }
 
@@ -54,14 +73,14 @@ impl From<TokenError> for AuthError {
 impl From<PasswordError> for AuthError {
     fn from(error: PasswordError) -> Self {
         match error {
-            PasswordError::PasswordHashingFailed => AuthError::HashingFailed,
+            PasswordError::PasswordHashingFailed => AuthError::HashingFailed("Password hashing failed".to_string()),
         }
     }
 }
 
 impl From<hmac::InvalidLength> for AuthError {
     fn from(_: hmac::InvalidLength) -> Self {
-        AuthError::HashingFailed
+        AuthError::HashingFailed("Hmac failed".to_string())
     }
 }
 
@@ -110,18 +129,12 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        tracing::trace!(
-            "Tokens generated successfully for id={}",
-            credentials.id
-        );
+        tracing::trace!("Tokens generated successfully for id={}", credentials.id);
 
         // 3. Get user info
         let user_info = Self::get_login_info(rm, credentials.id).await?;
 
-        tracing::trace!(
-            "User info retrieved successfully for id={}",
-            credentials.id
-        );
+        tracing::trace!("User info retrieved successfully for id={}", credentials.id);
 
         // 4. Store refresh token
         let create_dto = CreateRefreshTokenDto {
@@ -173,7 +186,7 @@ impl AuthController {
         // We need to know if it exists to check for reuse or expiration
         let token_entity = TokenRepository::get_by_hash(rm, &input_token_hash)
             .await?
-            .ok_or(AuthError::InvalidToken)?;
+            .ok_or(AuthError::NotFoundToken)?;
 
         // 3. Reuse Detection (Security Critical)
         if token_entity.is_revoked {
@@ -183,7 +196,12 @@ impl AuthController {
             );
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
             // Return generic error to avoid leaking implementation details
-            return Err(AuthError::RevokedToken.into());
+            return Err(AuthError::RevokedToken {
+                token_id: token_entity.id,
+                user_id: token_entity.user_id,
+                family_id: token_entity.family_id,
+            }
+            .into());
         }
 
         // 4. Check expiration
@@ -235,7 +253,11 @@ impl AuthController {
     }
 
     /// Logout user.
-    pub async fn logout(rm: &RepositoryManager, refresh_token: &str, auth_config: &AuthConfig,) -> Result<()> {
+    pub async fn logout(
+        rm: &RepositoryManager,
+        refresh_token: &str,
+        auth_config: &AuthConfig,
+    ) -> Result<()> {
         tracing::trace!("Logout attempt received");
 
         // 1. Hash incoming token
@@ -284,7 +306,9 @@ impl AuthController {
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, email)
             .await?
-            .ok_or(AuthError::InvalidEmail)?;
+            .ok_or(AuthError::InvalidEmail {
+                email: email.to_string(),
+            })?;
 
         tracing::trace!(
             "User found for email={}, id={}, status={:?}",
@@ -316,7 +340,11 @@ impl AuthController {
         };
 
         if !is_valid {
-            return Err(AuthError::InvalidPassword.into());
+            return Err(AuthError::InvalidPassword {
+                user_id: user.id,
+                email: email.to_string(),
+            }
+            .into());
         }
 
         tracing::trace!(
