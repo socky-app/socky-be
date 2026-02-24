@@ -2,6 +2,7 @@ use std::fmt;
 
 use thiserror::Error;
 
+// TODO: Fix Display
 #[derive(Debug, Error)]
 pub struct ConfigError {
     pub details: Vec<String>,

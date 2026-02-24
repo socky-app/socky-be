@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::format};
+use std::{error::Error, fmt::format, sync::Arc};
 
 use axum::{
     http::StatusCode,
@@ -7,44 +7,37 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
-use strum_macros::AsRefStr;
 use thiserror::Error;
 
 use crate::{
-    common::ErrorType,
     context::ErrorDetails,
     controller::{auth_controller::AuthError, ControllerError},
-    impl_error_type,
     model::user::error::{UserRoleError, UserStatusError},
     repository::RepositoryError,
     web::health_router::HealthError,
 };
 
 /// Web error.
-#[derive(Debug, Error, AsRefStr)]
+#[derive(Debug, Error)]
 pub enum WebError {
-    #[error("Controller: {0}")]
+    #[error(transparent)]
     Controller(#[from] ControllerError),
 
-    #[error("Current user missing in request parts")]
+    #[error("current user missing in request parts")]
     UserExtraction,
 
-    #[error("Health: {0}")]
+    #[error("service health check failed")]
     Health(#[from] HealthError),
 
-    #[error("Insuficient permission: {0}")]
+    #[error("insuficient permission")]
     UserRole(#[from] UserRoleError),
 }
 
-impl_error_type!(WebError {
-    delegate: [Controller, Health, UserRole],
-    terminal: [UserExtraction]
-});
-
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
-        tracing::debug!("{:<15} - {self}", "INTO_RES");
+        tracing::debug!("{:<15} - web_error", "INTO_RES");
 
+        // Map error to status code and message
         let (status_code, client_message) = get_status_code_and_message(&self);
 
         // Build the Public Response Body
@@ -52,25 +45,12 @@ impl IntoResponse for WebError {
             message: client_message.clone(),
         };
 
-        // Build the error data
-        let mut error_data = format!("{:?}", self);
-        let mut current_source = self.source();
-
-        while let Some(cause) = current_source {
-            error_data.push_str(&format!("\n  Caused by: {}", cause));
-            current_source = cause.source();
-        }
-
         // Build the Error Details
-        let details = ErrorDetails {
-            error_type: self.error_type(),
-            error_data,
-            client_message,
-        };
+        let details = ErrorDetails::new(&self, client_message);
 
         // Create response and add details to it
         let mut response = (status_code, Json(client_error)).into_response();
-        response.extensions_mut().insert(details);
+        response.extensions_mut().insert(Arc::new(details));
 
         response
     }

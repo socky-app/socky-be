@@ -8,10 +8,12 @@ pub mod repository;
 pub mod utils;
 
 mod app;
-mod common;
 mod context;
 mod controller;
 mod web;
 
 // Re-export create_app function
 pub use app::create_app;
+
+
+// TODO: Review error handling conversation and remove error! logs

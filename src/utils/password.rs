@@ -8,7 +8,7 @@ use crate::utils::hmac::hash_sha512;
 
 #[derive(Debug, Error)]
 pub enum PasswordError {
-    #[error("Password hashing failed")]
+    #[error("password hashing failed")]
     PasswordHashingFailed,
 }
 

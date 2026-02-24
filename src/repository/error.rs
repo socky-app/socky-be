@@ -1,14 +1,9 @@
-use strum_macros::AsRefStr;
 use thiserror::Error;
 
-use crate::common::ErrorType;
-
-#[derive(Debug, Error, AsRefStr)]
+#[derive(Debug, Error)]
 pub enum RepositoryError {
-    #[error("Database query failed")]
+    #[error("repository query failed")]
     DatabaseQueryFailed(#[from] sqlx::Error),
-    #[error("Object not found: {entity} (id: {id})")]
+    #[error("could not find {entity} with id {id}")]
     NotFound { entity: &'static str, id: i64 },
 }
-
-impl ErrorType for RepositoryError {}

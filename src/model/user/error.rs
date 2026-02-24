@@ -1,22 +1,17 @@
-use strum_macros::AsRefStr;
 use thiserror::Error;
 
-use crate::common::ErrorType;
-
-#[derive(Debug, Clone, Error, AsRefStr)]
+#[derive(Debug, Clone, Error)]
 pub enum UserStatusError {
-    #[error("User is disabled")]
+    #[error("user is disabled")]
     Disabled,
-    #[error("User is pending")]
+    #[error("user is pending")]
     Pending,
-    #[error("User is locked")]
+    #[error("user is locked")]
     Locked,
 }
 
-impl ErrorType for UserStatusError {}
-
 #[derive(Debug, Clone, Error)]
-#[error("Required role: {required}, current role: {current}")]
+#[error("required role ({required}) is greater than current role ({current})")]
 pub struct UserRoleError {
     pub required: i16,
     pub current: i16,
@@ -27,5 +22,3 @@ impl AsRef<str> for UserRoleError {
         "UserRoleError"
     }
 }
-
-impl ErrorType for UserRoleError {}

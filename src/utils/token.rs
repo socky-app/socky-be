@@ -14,11 +14,11 @@ const SELECTED_ALGO: Algorithm = Algorithm::HS256;
 
 #[derive(Debug, Error)]
 pub enum TokenError {
-    #[error("Failed to generate new token")]
+    #[error("failed to generate new token")]
     TokenCreationFailed,
-    #[error("Invalid token")]
+    #[error("invalid token")]
     InvalidToken,
-    #[error("Token expired")]
+    #[error("token expired")]
     ExpiredToken,
 }
 

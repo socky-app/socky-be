@@ -2,12 +2,10 @@ use std::thread::AccessError;
 
 use secrecy::{ExposeSecret, SecretString};
 
-use strum_macros::AsRefStr;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    common::ErrorType,
     config::AuthConfig,
     controller::{ControllerError, Result},
     model::{
@@ -30,34 +28,43 @@ use crate::{
     },
 };
 
-#[derive(Debug, Error, AsRefStr)]
+#[derive(Debug, Error)]
 pub enum AuthError {
+    #[error("hashing failed for {0}")]
     HashingFailed(String),
+
+    #[error("invalid email {email}")]
     InvalidEmail {
         email: String,
     },
+
+    #[error("invalid password for user {user_id} {email}")]
     InvalidPassword {
         user_id: i64,
         email: String,
     },
+
+    #[error("missing token")]
     MissingToken,
+
+    #[error("token not found")]
     NotFoundToken,
+
+    #[error("invalid token")]
     InvalidToken,
+
+    #[error("expired token")]
     ExpiredToken, // TODO: Add user_id and other info to expired token entity
+    
+    #[error("revoked token: {token_id} family {family_id} user {user_id} ")]
     RevokedToken {
         token_id: i64,
         user_id: i64,
         family_id: Uuid,
     },
+
+    #[error("token creation failed")]
     TokenCreationFailed,
-}
-
-impl ErrorType for AuthError {}
-
-impl std::fmt::Display for AuthError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
-        write!(fmt, "{self:?}")
-    }
 }
 
 impl From<TokenError> for AuthError {
@@ -73,14 +80,14 @@ impl From<TokenError> for AuthError {
 impl From<PasswordError> for AuthError {
     fn from(error: PasswordError) -> Self {
         match error {
-            PasswordError::PasswordHashingFailed => AuthError::HashingFailed("Password hashing failed".to_string()),
+            PasswordError::PasswordHashingFailed => AuthError::HashingFailed("password".to_string()),
         }
     }
 }
 
 impl From<hmac::InvalidLength> for AuthError {
     fn from(_: hmac::InvalidLength) -> Self {
-        AuthError::HashingFailed("Hmac failed".to_string())
+        AuthError::HashingFailed("hmac".to_string())
     }
 }
 
@@ -334,7 +341,7 @@ impl AuthController {
             .await
             .map_err(|_e| {
                 ControllerError::Internal(
-                    "Password verification blocking thread failed to join".to_string(),
+                    "blocking thread for password verification failed to join".to_string(),
                 )
             })?
         };
