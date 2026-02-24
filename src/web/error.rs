@@ -18,7 +18,7 @@ use crate::{
 #[derive(Debug, Error, strum_macros::AsRefStr)]
 pub enum WebError {
     #[error("Controller: {0}")]
-    Service(#[from] ControllerError),
+    Controller(#[from] ControllerError),
 
     #[error("Current user missing in request parts")]
     UserExtraction,
@@ -62,7 +62,7 @@ struct ClientError {
 /// Determine status code and user-facing message
 fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
     match error {
-        WebError::Service(service_error) => match service_error {
+        WebError::Controller(controller_error) => match controller_error {
             ControllerError::Repository(e) => match e {
                 RepositoryError::NotFound { entity, id } => {
                     (StatusCode::NOT_FOUND, "Resource not found".to_string())
