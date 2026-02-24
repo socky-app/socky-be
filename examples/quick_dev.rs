@@ -1,6 +1,5 @@
 use anyhow::Result;
 use reqwest::Client;
-use serde_json::json;
 
 mod common;
 
@@ -9,17 +8,18 @@ use common::{print_and_return_body, BASE_URL};
 async fn main() -> Result<()> {
     let client = Client::new();
 
-    // POST /login
+    // GET /health/live
+    let login_res = client.get(format!("{BASE_URL}/health/live")).send().await?;
+
+    print_and_return_body(login_res).await;
+
+    // GET /health/ready
     let login_res = client
-        .post(format!("{BASE_URL}/api/auth/login"))
-        .json(&json!({
-                "email": "admin@socky.com",
-                "password": "123"
-        }))
+        .get(format!("{BASE_URL}/health/ready"))
         .send()
         .await?;
 
-    print_and_return_body(login_res).await.unwrap();
+    print_and_return_body(login_res).await;
 
     Ok(())
 }

@@ -31,7 +31,9 @@ pub fn public() -> Router<AppState> {
 
 /// Protected auth routes
 pub fn protected() -> Router<AppState> {
-    Router::new().route("/me", get(me_handler))
+    Router::new()
+        .route("/me", get(me_handler))
+        .route("/health", get(health_handler))
 }
 
 /// Login with email and password.
@@ -85,4 +87,13 @@ async fn me_handler(
     Ok(Json(
         AuthController::get_login_info(&rm, current_user.id).await?,
     ))
+}
+
+/// Check user authentication.
+// TODO: #[tracing::instrument(name = "health", skip(pool, addr, headers, request))]
+async fn health_handler(
+    current_user: CurrentUser,
+) -> Result<()> {
+    tracing::debug!("{:<15} - health_handler", "HANDLER");
+    Ok(())
 }

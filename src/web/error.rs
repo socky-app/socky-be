@@ -9,9 +9,10 @@ use thiserror::Error;
 
 use crate::{
     context::ErrorDetails,
+    controller::{auth_controller::AuthError, ControllerError},
     model::user::error::{UserRoleError, UserStatusError},
     repository::RepositoryError,
-    controller::{auth_controller::AuthError, ControllerError},
+    web::health_router::HealthError,
 };
 
 /// Web error.
@@ -22,6 +23,9 @@ pub enum WebError {
 
     #[error("Current user missing in request parts")]
     UserExtraction,
+
+    #[error("Health: {0}")]
+    Health(#[from] HealthError),
 
     #[error("Insuficient permission: {0}")]
     UserRole(#[from] UserRoleError),
@@ -65,11 +69,11 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
         WebError::Controller(controller_error) => match controller_error {
             ControllerError::Repository(e) => match e {
                 RepositoryError::NotFound { entity, id } => {
-                    (StatusCode::NOT_FOUND, "Resource not found".to_string())
+                    (StatusCode::NOT_FOUND, "Resource not found.".to_string())
                 }
                 RepositoryError::DatabaseQueryFailed(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Service is temporarily unavailable. Please try again later.".to_string(),
+                    "Service is temporarily unavailable.".to_string(),
                 ),
             },
 
@@ -78,8 +82,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Authentication processing failed.".to_string(),
                 ),
-                AuthError::InvalidEmail
-                | AuthError::InvalidPassword => (
+                AuthError::InvalidEmail | AuthError::InvalidPassword => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid email or password.".to_string(),
                 ),
@@ -122,6 +125,8 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
             "You must be logged in to access this resource.".to_string(),
         ),
 
-        WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied".to_string()),
+        WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),
+
+        WebError::Health(_) => (StatusCode::SERVICE_UNAVAILABLE, "Service is temporarily unavailable.".to_string()),
     }
 }
