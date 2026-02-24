@@ -1,11 +1,12 @@
 use sqlx::PgPool;
+use strum_macros::AsRefStr;
 use thiserror::Error;
 
-use crate::config::DbConfig;
+use crate::{common::ErrorType, config::DbConfig};
 
 mod db;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, AsRefStr)]
 pub enum RepositoryManagerError {
     #[error("Failed to create DB pool")]
     CreatePoolFailed(sqlx::Error),
@@ -21,6 +22,8 @@ impl RepositoryManagerError {
         }
     }
 }
+
+impl ErrorType for RepositoryManagerError {}
 
 #[derive(Clone)]
 pub struct RepositoryManager {

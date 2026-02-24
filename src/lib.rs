@@ -8,6 +8,7 @@ pub mod repository;
 pub mod utils;
 
 mod app;
+mod common;
 mod context;
 mod controller;
 mod web;

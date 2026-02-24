@@ -2,33 +2,26 @@ use std::thread::AccessError;
 
 use secrecy::{ExposeSecret, SecretString};
 
+use strum_macros::AsRefStr;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    config::AuthConfig,
-    model::{
+    common::ErrorType, config::AuthConfig, controller::{ControllerError, Result}, model::{
         refresh_token::CreateRefreshTokenDto,
         user::{
-            dto::LoginRequestDto,
-            error::UserStatusError,
-            vo::{AuthResponseVo, LoggedUserInfoVo},
-            LoginCredentialsEntity, UserEntity, UserStatus,
+            LoginCredentialsEntity, UserEntity, UserStatus, dto::LoginRequestDto, error::UserStatusError, vo::{AuthResponseVo, LoggedUserInfoVo}
         },
-    },
-    repository::{
-        token_repo::TokenRepository, user_repo::UserRepository, Create, Get, RepositoryError,
-        RepositoryManager,
-    },
-    controller::{Result, ControllerError},
-    utils::{
+    }, repository::{
+        Create, Get, RepositoryError, RepositoryManager, token_repo::TokenRepository, user_repo::UserRepository
+    }, utils::{
         hmac,
         password::{PasswordError, PasswordUtils},
         token::{self, AccessClaims, TokenError},
-    },
+    }
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, AsRefStr)]
 pub enum AuthError {
     HashingFailed,
     InvalidEmail,
@@ -39,6 +32,8 @@ pub enum AuthError {
     RevokedToken,
     TokenCreationFailed,
 }
+
+impl ErrorType for AuthError {}
 
 impl std::fmt::Display for AuthError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {

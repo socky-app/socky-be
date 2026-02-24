@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -5,18 +7,21 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use strum_macros::AsRefStr;
 use thiserror::Error;
 
 use crate::{
+    common::ErrorType,
     context::ErrorDetails,
     controller::{auth_controller::AuthError, ControllerError},
+    impl_error_type,
     model::user::error::{UserRoleError, UserStatusError},
     repository::RepositoryError,
     web::health_router::HealthError,
 };
 
 /// Web error.
-#[derive(Debug, Error, strum_macros::AsRefStr)]
+#[derive(Debug, Error, AsRefStr)]
 pub enum WebError {
     #[error("Controller: {0}")]
     Controller(#[from] ControllerError),
@@ -31,6 +36,11 @@ pub enum WebError {
     UserRole(#[from] UserRoleError),
 }
 
+impl_error_type!(WebError {
+    delegate: [Controller, Health, UserRole],
+    terminal: [UserExtraction]
+});
+
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
         tracing::debug!("{:<15} - {self}", "INTO_RES");
@@ -44,7 +54,7 @@ impl IntoResponse for WebError {
 
         // Build the Error Details
         let details = ErrorDetails {
-            error_type: self.as_ref().into(),
+            error_type: self.error_type(),
             error_data: format!("{:?}", self),
             client_message,
         };
@@ -108,10 +118,9 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                     StatusCode::FORBIDDEN,
                     "User account is pending activation.".to_string(),
                 ),
-                UserStatusError::Locked => (
-                    StatusCode::FORBIDDEN,
-                    "User account is locked.".to_string(),
-                ),
+                UserStatusError::Locked => {
+                    (StatusCode::FORBIDDEN, "User account is locked.".to_string())
+                }
             },
 
             ControllerError::Internal(_) => (
@@ -129,6 +138,9 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
 
         WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),
 
-        WebError::Health(_) => (StatusCode::SERVICE_UNAVAILABLE, "Service is temporarily unavailable.".to_string()),
+        WebError::Health(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Service is temporarily unavailable.".to_string(),
+        ),
     }
 }

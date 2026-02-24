@@ -1,11 +1,14 @@
 use std::time::Duration;
 
 use axum::{extract::State, routing::get, Router};
+use strum_macros::AsRefStr;
 use thiserror::Error;
 use tokio::time::timeout;
 
 use crate::{
     app::AppState,
+    common::ErrorType,
+    impl_error_type,
     repository::{RepositoryManager, RepositoryManagerError},
     web::Result,
 };
@@ -13,14 +16,19 @@ use crate::{
 // The check should pass only if the DB responds within this time
 const HEALTH_READY_TIMEOUT: Duration = Duration::from_secs(1);
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, AsRefStr)]
 pub enum HealthError {
     #[error("Health checked timed out")]
     Timeout,
-    
+
     #[error("Health check failed: {0}")]
     Repository(RepositoryManagerError),
 }
+
+impl_error_type!(HealthError {
+    delegate: [Repository],
+    terminal: [Timeout]
+});
 
 /// Public health routes.
 pub fn public() -> Router<AppState> {
