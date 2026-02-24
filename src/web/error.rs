@@ -73,14 +73,14 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 }
                 RepositoryError::DatabaseQueryFailed(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Service is temporarily unavailable.".to_string(),
+                    "An unexpected internal error occurred.".to_string(),
                 ),
             },
 
             ControllerError::Auth(e) => match e {
                 AuthError::HashingFailed => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Authentication processing failed.".to_string(),
+                    "An unexpected internal error occurred.".to_string(),
                 ),
                 AuthError::InvalidEmail | AuthError::InvalidPassword => (
                     StatusCode::UNAUTHORIZED,
@@ -95,7 +95,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 ),
                 AuthError::TokenCreationFailed => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to generate token.".to_string(),
+                    "An unexpected internal error occurred.".to_string(),
                 ),
             },
 
@@ -105,24 +105,26 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                     "User account is disabled.".to_string(),
                 ),
                 UserStatusError::Pending => (
-                    StatusCode::BAD_REQUEST,
+                    StatusCode::FORBIDDEN,
                     "User account is pending activation.".to_string(),
                 ),
                 UserStatusError::Locked => (
-                    StatusCode::BAD_REQUEST,
+                    StatusCode::FORBIDDEN,
                     "User account is locked.".to_string(),
                 ),
             },
 
             ControllerError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal server error".to_string(),
+                "An unexpected internal error occurred.".to_string(),
             ),
         },
 
+        // We return internal server error here because this indicates a misconfigured route,
+        // that should be under the auth_middleware.
         WebError::UserExtraction => (
-            StatusCode::UNAUTHORIZED,
-            "You must be logged in to access this resource.".to_string(),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "An unexpected internal error occurred.".to_string(),
         ),
 
         WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),

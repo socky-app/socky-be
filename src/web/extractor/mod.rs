@@ -30,7 +30,7 @@ where
             .cloned()
             .ok_or_else(|| {
                 tracing::error!(
-                    "CurrentUser not found - auth middleware missing or user not authenticated"
+                    "CurrentUser not found, auth middleware missing"
                 );
                 WebError::UserExtraction
             })
