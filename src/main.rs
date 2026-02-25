@@ -22,7 +22,7 @@ async fn run() -> Result<()> {
 
     // Start server
     let listener = TcpListener::bind(&net_config.addr()).await?;
-    tracing::info!("{:<12} - {}\n", "LISTENING", net_config.addr());
+    tracing::info!("Listening on {}", net_config.addr());
     axum::serve(listener, app).await?;
 
     Ok(())
