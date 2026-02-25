@@ -35,8 +35,6 @@ pub enum WebError {
 
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
-        tracing::debug!("{:<15} - web_error", "INTO_RES");
-
         // Map error to status code and message
         let (status_code, client_message) = get_status_code_and_message(&self);
 

@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use tokio::net::TcpListener;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 use socky_be::{
@@ -22,7 +23,7 @@ async fn run() -> Result<()> {
 
     // Start server
     let listener = TcpListener::bind(&net_config.addr()).await?;
-    tracing::info!("Listening on {}", net_config.addr());
+    info!("Listening on {}", net_config.addr());
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -55,7 +56,7 @@ async fn main() {
     }
 
     if let Err(e) = run().await {
-        tracing::error!("Application finished with error: {}", e);
+        error!("Application finished with error: {}", e);
         std::process::exit(1);
     }
 }

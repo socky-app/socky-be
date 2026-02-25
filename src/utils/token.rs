@@ -5,6 +5,7 @@ use jsonwebtoken::{
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::{config::AuthConfig, model::user::UserRole};
@@ -105,7 +106,11 @@ pub struct TokenPair {
 }
 
 /// Generate a pair of access and refresh tokens.
-pub fn generate_tokens(user_id: i64, user_role: UserRole, config: &AuthConfig) -> Result<TokenPair, TokenError> {
+pub fn generate_tokens(
+    user_id: i64,
+    user_role: UserRole,
+    config: &AuthConfig,
+) -> Result<TokenPair, TokenError> {
     generate_tokens_with_family_id(user_id, user_role, Uuid::new_v4(), config)
 }
 
@@ -145,20 +150,24 @@ pub fn generate_tokens_with_family_id(
 }
 
 /// Generates a token using any type that implements the Claims trait.
+#[tracing::instrument(name = "validate_token", skip_all)]
 fn generate_token<T: Claims>(claims: &T, secret: &str) -> Result<String, TokenError> {
     let key = EncodingKey::from_secret(secret.as_bytes());
     let header = Header::new(SELECTED_ALGO);
 
-    tracing::trace!(
-        "Generating {} token for user_id: {}",
-        T::AUDIENCE,
-        claims.user_id()
+    let token = encode(&header, claims, &key).map_err(|_| TokenError::TokenCreationFailed)?;
+    
+    debug!(
+        user_id = %claims.user_id(),
+        audience = %T::AUDIENCE,
+        "Token generated",
     );
 
-    encode(&header, claims, &key).map_err(|_| TokenError::TokenCreationFailed)
+    Ok(token)
 }
 
 /// Validates a token using any type that implements the Claims trait.
+#[tracing::instrument(name = "validate_token", skip_all)]
 pub fn validate_token<T: Claims>(token: &str, secret: &str) -> Result<T, TokenError> {
     let mut validation = Validation::new(SELECTED_ALGO);
     validation.set_audience(&[T::AUDIENCE]);
@@ -173,10 +182,10 @@ pub fn validate_token<T: Claims>(token: &str, secret: &str) -> Result<T, TokenEr
         _ => TokenError::InvalidToken,
     })?;
 
-    tracing::trace!(
-        "Successfully verified {} token for user_id: {}",
-        T::AUDIENCE,
-        token_data.claims.user_id()
+    debug!(
+        user_id = %token_data.claims.user_id(),
+        audience = %T::AUDIENCE,
+        "Token validated",
     );
 
     Ok(token_data.claims)

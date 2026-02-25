@@ -10,6 +10,7 @@ use crate::{
     },
 };
 use sqlx::QueryBuilder;
+use tracing::debug;
 
 /// Transaction repository for database operations
 pub struct TransactionRepository;
@@ -51,7 +52,7 @@ impl TransactionRepository {
             .fetch_one(rm.pool())
             .await?;
 
-        tracing::trace!("Transaction count: {:?}", count);
+        debug!("Transaction count: {:?}", count);
 
         Ok(count.0)
     }
@@ -63,10 +64,6 @@ impl TransactionRepository {
         limit: i64,
         query: TransactionQueryDto,
     ) -> Result<(Vec<TransactionEntity>, i64)> {
-        tracing::trace!(
-            "Finding transactions with pagination and filters: {:?}",
-            query
-        );
         let total = Self::count_transactions(&rm.clone(), &query).await?;
         if total == 0 {
             return Ok((Vec::new(), total));

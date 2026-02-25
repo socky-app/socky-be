@@ -6,6 +6,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use tracing::{Span, trace};
 
 use crate::{
     config::AppConfig, context::CurrentUser, controller::auth_controller::AuthController, web::Result,
@@ -16,7 +17,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response> {
-    tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE>>");
+    trace!("Middleware auth ->");
 
     // Extract token cleanly
     let token = request
@@ -32,8 +33,9 @@ pub async fn auth_middleware(
     // TODO: Check if CurrentUser should be wrapped in and Arc
     let current_user = CurrentUser::from(claims);
 
-    // Insert user_id into current span
-    tracing::Span::current().record("user_id", current_user.id);
+    // Insert user info into current span
+    Span::current().record("user_id", current_user.id);
+    Span::current().record("user_role", current_user.role as i16);
 
     // Insert into request extensions for dowstream handlers
     request.extensions_mut().insert(current_user.clone());
@@ -41,7 +43,7 @@ pub async fn auth_middleware(
     // Execute downstream handlers
     let mut response = next.run(request).await;
 
-    tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE<<");
+    trace!("Middleware auth <-");
 
     // Insert into response extensions for upstream middleware
     response.extensions_mut().insert(current_user);

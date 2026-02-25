@@ -7,6 +7,7 @@ use axum::{
     Json, Router,
 };
 use serde_json::json;
+use tracing::trace;
 
 use crate::{
     app::AppState,
@@ -37,13 +38,12 @@ pub fn protected() -> Router<AppState> {
 }
 
 /// Login with email and password.
-// TODO: #[tracing::instrument(name = "login", skip(pool, addr, headers, request))]
 async fn login_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<LoginRequestDto>,
 ) -> Result<Json<AuthResponseVo>> {
-    tracing::debug!("{:<15} - login_handler", "HANDLER");
+    trace!("Handler auth login");
 
     Ok(Json(
         AuthController::login(&rm, request, &app_config.auth).await?,
@@ -51,13 +51,12 @@ async fn login_handler(
 }
 
 /// Refresh credentials and rotate tokens.
-// TODO: #[tracing::instrument(name = "refresh", skip(pool, addr, headers, request))]
 async fn refresh_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<RefreshRequestDto>,
 ) -> Result<Json<AuthResponseVo>> {
-    tracing::debug!("{:<15} - refresh_handler", "HANDLER");
+    trace!("Handler auth refresh");
 
     Ok(Json(
         AuthController::refresh(&rm, &request.refresh_token, &app_config.auth).await?,
@@ -65,24 +64,22 @@ async fn refresh_handler(
 }
 
 /// Logout user.
-// TODO: #[tracing::instrument(name = "logout", skip(pool, addr, headers, request))]
 async fn logout_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
     Json(request): Json<LogoutRequestDto>,
 ) -> Result<()> {
-    tracing::debug!("{:<15} - logout_handler", "HANDLER");
+    trace!("Handler auth logout");
 
     Ok(AuthController::logout(&rm, &request.refresh_token, &app_config.auth).await?)
 }
 
 /// Get user information.
-// TODO: #[tracing::instrument(name = "me", skip(pool, addr, headers, request))]
 async fn me_handler(
     State(rm): State<RepositoryManager>,
     current_user: CurrentUser,
 ) -> Result<Json<LoggedUserInfoVo>> {
-    tracing::debug!("{:<15} - me_handler", "HANDLER");
+    trace!("Handler auth me");
 
     Ok(Json(
         AuthController::get_login_info(&rm, current_user.id).await?,
@@ -90,10 +87,9 @@ async fn me_handler(
 }
 
 /// Check user authentication.
-// TODO: #[tracing::instrument(name = "health", skip(pool, addr, headers, request))]
 async fn health_handler(
     current_user: CurrentUser,
 ) -> Result<()> {
-    tracing::debug!("{:<15} - health_handler", "HANDLER");
+    trace!("Handler auth health");
     Ok(())
 }

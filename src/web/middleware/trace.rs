@@ -15,7 +15,7 @@ use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
-use tracing::{debug, info_span, Span};
+use tracing::{Span, debug, error, field, info, info_span, warn};
 use uuid::Uuid;
 
 use crate::context::{CurrentUser, ErrorDetails};
@@ -47,21 +47,25 @@ pub fn apply_trace_middleware(router: Router) -> Router {
                         request_id = %request_id,
                         method = %request.method(),
                         uri = %request.uri().path(),
-                        status_code = tracing::field::Empty,
-                        latency_ms = tracing::field::Empty,
-                        user_id = tracing::field::Empty,
+                        status_code = field::Empty,
+                        latency_ms = field::Empty,
+                        user_id = field::Empty,
+                        user_role = field::Empty,
                     )
                 })
                 .on_response(
                     |response: &Response<Body>, latency: Duration, span: &Span| {
                         let status = response.status();
 
-                        // 1. Server Errors (5xx) -> Always ERROR
+                        span.record("status_code", response.status().as_u16());
+                        span.record("latency_ms", latency.as_millis());
+
+                        // Server Errors (5xx)
                         if status.is_server_error() {
                             if let Some(err) = response.extensions().get::<Arc<ErrorDetails>>() {
                                 let chain_json = serde_json::to_string(&err.error_chain)
                                     .unwrap_or_else(|_| "[]".to_string());
-                                tracing::error!(
+                                error!(
                                     client_msg = %err.client_message,
                                     error_message = %err.error_message,
                                     error_type = %err.error_type,
@@ -71,15 +75,15 @@ pub fn apply_trace_middleware(router: Router) -> Router {
                                 );
                             } else {
                                 // Fallback: Catches framework-generated 500s or panics
-                                tracing::error!("Server error processing request");
+                                error!("Server error processing request");
                             }
                         }
-                        // 2. Client Errors (4xx) -> Always WARN
+                        // Client Errors (4xx)
                         else if status.is_client_error() {
                             if let Some(err) = response.extensions().get::<Arc<ErrorDetails>>() {
                                 let chain_json = serde_json::to_string(&err.error_chain)
                                     .unwrap_or_else(|_| "[]".to_string());
-                                tracing::warn!(
+                                warn!(
                                     client_msg = %err.client_message,
                                     error_message = %err.error_message,
                                     error_type = %err.error_type,
@@ -89,16 +93,16 @@ pub fn apply_trace_middleware(router: Router) -> Router {
                                 );
                             } else {
                                 // Fallback: Catches 404 Not Found, 400 Bad Request from Axum Extractors, etc.
-                                tracing::warn!("Client error processing request");
+                                warn!("Client error processing request");
                             }
                         }
-                        // 3. Success (2xx) -> INFO
+                        // Success (2xx)
                         else if status.is_success() {
-                            tracing::info!("Request completed successfully");
+                            info!("Request completed successfully");
                         }
-                        // 4. Redirects & Others (3xx, etc.) -> DEBUG or INFO
+                        // Redirects & Others (3xx, etc.)
                         else {
-                            tracing::debug!("Request finished with non-standard status");
+                            debug!("Request finished with non-standard status");
                         }
                     },
                 )

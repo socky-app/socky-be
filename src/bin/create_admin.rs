@@ -9,6 +9,7 @@ use socky_be::{
     repository::{user_repo::UserRepository, Create, RepositoryManager},
     utils::password::PasswordUtils,
 };
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -49,19 +50,19 @@ async fn main() -> Result<()> {
     } = load_config().context("Failed to configuration from env variables")?;
 
     // Initialize RepositoryManager
-    tracing::info!("Connecting to the database");
+    info!("Connecting to the database");
     let rm = RepositoryManager::new(&db_config)
         .await
         .context("Failed to establish a connection to the database")?;
 
     // Hash password
-    tracing::info!("Hashing password");
+    info!("Hashing password");
     let password_hash =
         PasswordUtils::hash_password(password, auth_config.password_pepper.expose_secret())
             .context("Failed to hash the password using the configured algorithm and pepper")?;
 
     // Insert user into respository
-    tracing::info!("Inserting admin user into the database");
+    info!("Inserting admin user into the database");
     let dto = CreateUserDto {
         email: email.to_string(),
         password: password_hash,
@@ -72,7 +73,7 @@ async fn main() -> Result<()> {
         .await
         .context("Failed to insert the new admin user")?;
 
-    tracing::info!(
+    info!(
         "✅ Successfully created admin user '{}' with ID: {}",
         email,
         admin_id

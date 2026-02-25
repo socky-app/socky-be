@@ -3,6 +3,7 @@ use std::thread::AccessError;
 use secrecy::{ExposeSecret, SecretString};
 
 use thiserror::Error;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
@@ -24,7 +25,7 @@ use crate::{
     utils::{
         hmac,
         password::{PasswordError, PasswordUtils},
-        token::{self, AccessClaims, TokenError},
+        token::{self, AccessClaims, Claims, TokenError},
     },
 };
 
@@ -34,15 +35,10 @@ pub enum AuthError {
     HashingFailed(String),
 
     #[error("invalid email {email}")]
-    InvalidEmail {
-        email: String,
-    },
+    InvalidEmail { email: String },
 
     #[error("invalid password for user {user_id} {email}")]
-    InvalidPassword {
-        user_id: i64,
-        email: String,
-    },
+    InvalidPassword { user_id: i64, email: String },
 
     #[error("missing token")]
     MissingToken,
@@ -55,7 +51,7 @@ pub enum AuthError {
 
     #[error("expired token")]
     ExpiredToken, // TODO: Add user_id and other info to expired token entity
-    
+
     #[error("revoked token: {token_id} family {family_id} user {user_id} ")]
     RevokedToken {
         token_id: i64,
@@ -80,7 +76,9 @@ impl From<TokenError> for AuthError {
 impl From<PasswordError> for AuthError {
     fn from(error: PasswordError) -> Self {
         match error {
-            PasswordError::PasswordHashingFailed => AuthError::HashingFailed("password".to_string()),
+            PasswordError::PasswordHashingFailed => {
+                AuthError::HashingFailed("password".to_string())
+            }
         }
     }
 }
@@ -95,14 +93,12 @@ pub struct AuthController;
 
 impl AuthController {
     // Login user.
+    #[tracing::instrument(name = "auth_login", skip_all, fields(email = %request.email))]
     pub async fn login(
         rm: &RepositoryManager,
         request: LoginRequestDto,
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
-        let start = std::time::Instant::now();
-        tracing::trace!("Login attempt received for email: {}", request.email);
-
         // 1. Verify login credentials
         let credentials = Self::verify_login(
             &rm.clone(),
@@ -111,13 +107,6 @@ impl AuthController {
             &auth_config.password_pepper,
         )
         .await?;
-
-        let verification_time = start.elapsed();
-        tracing::trace!(
-            "User verification completed in {:?} for id={}",
-            verification_time,
-            credentials.id
-        );
 
         // 2. Generate token pair
         let tokens = token::generate_tokens(credentials.id, credentials.role, auth_config)
@@ -128,12 +117,8 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        tracing::trace!("Tokens generated successfully for id={}", credentials.id);
-
         // 3. Get user info
         let user_info = Self::get_login_info(rm, credentials.id).await?;
-
-        tracing::trace!("User info retrieved successfully for id={}", credentials.id);
 
         // 4. Store refresh token
         let create_dto = CreateRefreshTokenDto {
@@ -152,12 +137,10 @@ impl AuthController {
             });
         }
 
-        let total_time = start.elapsed();
-        tracing::trace!(
-            "Login successful for email={}, id={}, total_time={:?}",
-            &request.email,
-            credentials.id,
-            total_time
+        debug!(
+            user_id = %user_info.id,
+            user_role = %user_info.role as i16,
+            "Login successful",
         );
 
         // 6. Return login VO
@@ -169,6 +152,7 @@ impl AuthController {
     }
 
     /// Refresh tokens.
+    #[tracing::instrument(name = "auth_refresh", skip_all)]
     pub async fn refresh(
         rm: &RepositoryManager,
         input_token: &str,
@@ -190,7 +174,7 @@ impl AuthController {
         // 3. Reuse Detection (Security Critical)
         if token_entity.is_revoked {
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
-            
+
             return Err(AuthError::RevokedToken {
                 token_id: token_entity.id,
                 user_id: token_entity.user_id,
@@ -232,12 +216,13 @@ impl AuthController {
             expires_at: new_tokens.refresh_expires_at,
         };
 
-        TokenRepository::rotate(
-            rm,
-            &create_dto,
-            token_entity.id, // Old token (to revoke)
-        )
-        .await?;
+        TokenRepository::rotate(rm, &create_dto, token_entity.id).await?;
+
+        debug!(
+            user_id = %user_info.id,
+            user_role = user_info.role as i16,
+            "Refresh successful",
+        );
 
         // 8. Return new tokens
         Ok(AuthResponseVo {
@@ -248,13 +233,12 @@ impl AuthController {
     }
 
     /// Logout user.
+    #[tracing::instrument(name = "auth_logout", skip_all)]
     pub async fn logout(
         rm: &RepositoryManager,
         refresh_token: &str,
         auth_config: &AuthConfig,
     ) -> Result<()> {
-        tracing::trace!("Logout attempt received");
-
         // 1. Hash incoming token
         let token_hash = hmac::hash_sha512(
             refresh_token.as_bytes(),
@@ -267,26 +251,47 @@ impl AuthController {
         // TODO: This logic can be optimized and transformed into a single SQL query
         if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
             // 3. Revoke the entire Family
-            tracing::trace!("Revoking session family: {}", token_entity.family_id);
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
+            debug!(
+                user_id = token_entity.user_id,
+                family_id = %token_entity.family_id,
+                "Token family revoked"
+            );
+        } else {
+            debug!("Refresh token not found");
         }
 
-        tracing::trace!("Logout successful.");
         Ok(())
     }
 
     /// Verify if the access token is valid.
+    #[tracing::instrument(name = "auth_verify_token", skip_all)]
     pub fn verify_access_token(
         token: Option<&str>, // TODO: review the logic here so that we don't need the optional
         auth_config: &AuthConfig,
     ) -> Result<AccessClaims> {
         let token = token.ok_or(AuthError::MissingToken)?;
 
-        Ok(token::validate_token::<AccessClaims>(
+        let claims = token::validate_token::<AccessClaims>(
             token,
             auth_config.access_token_secret.expose_secret(),
         )
-        .map_err(AuthError::from)?)
+        .map_err(AuthError::from)?;
+
+        Ok(claims)
+    }
+
+    #[tracing::instrument(name = "auth_login_info", skip_all, fields(user_id = %user_id))]
+    pub async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
+        let user: UserEntity = UserRepository::get(rm, user_id).await?;
+
+        debug!("Logged user info retrieved successfully");
+
+        Ok(LoggedUserInfoVo {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        })
     }
 
     /// Verify login credentials.
@@ -296,21 +301,12 @@ impl AuthController {
         password: &str,
         pepper: &SecretString,
     ) -> Result<LoginCredentialsEntity> {
-        tracing::trace!("Starting login verification for user: {}", email);
-
         // 1. Get login credentials
         let user = UserRepository::get_login_credentials(rm, email)
             .await?
             .ok_or(AuthError::InvalidEmail {
                 email: email.to_string(),
             })?;
-
-        tracing::trace!(
-            "User found for email={}, id={}, status={:?}",
-            email,
-            user.id,
-            user.status
-        );
 
         // 2. Check if user is active
         user.status.check_status()?;
@@ -342,27 +338,11 @@ impl AuthController {
             .into());
         }
 
-        tracing::trace!(
-            "Login verification successful for email={}, id={}",
-            email,
-            user.id
+        debug!(
+            user_id = %user.id,
+            "Login verification successful",
         );
 
         Ok(user)
-    }
-
-    pub async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
-        tracing::trace!("Starting to fetch logged user info for id={}", user_id);
-
-        // Get user basic info
-        let user: UserEntity = UserRepository::get(rm, user_id).await?;
-
-        tracing::trace!("User info retrieved successfully for id={}", user_id,);
-
-        Ok(LoggedUserInfoVo {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        })
     }
 }

@@ -1,4 +1,5 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use tracing::{debug, info};
 use std::time::Duration;
 
 use crate::config::DbConfig;
@@ -20,7 +21,7 @@ pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerE
         .await
         .map_err(RepositoryManagerError::CreatePoolFailed)?;
     
-    tracing::debug!("Database connection pool created successfully");
+    info!("Database connection pool created successfully");
     Ok(pool)
 }
 
@@ -35,6 +36,6 @@ pub async fn test_connection(pool: &PgPool) -> Result<(), RepositoryManagerError
         .execute(pool)
         .await
         .map_err(RepositoryManagerError::ConnectionFailed)?;
-    tracing::trace!("Database connection test successful");
+    debug!("Database connection test successful");
     Ok(())
 }

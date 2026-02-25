@@ -3,6 +3,7 @@ use std::time::Duration;
 use axum::{extract::State, routing::get, Router};
 use thiserror::Error;
 use tokio::time::timeout;
+use tracing::trace;
 
 use crate::{
     app::AppState,
@@ -31,13 +32,13 @@ pub fn public() -> Router<AppState> {
 
 /// Check if service is alive.
 async fn live_handler() -> Result<()> {
-    tracing::debug!("{:<15} - live_handler", "HANDLER");
+    trace!("Handler health live");
     Ok(())
 }
 
 /// Chec if service is live and dependencies are ready.
 async fn ready_handler(State(rm): State<RepositoryManager>) -> Result<()> {
-    tracing::debug!("{:<15} - ready_handler", "HANDLER");
+    trace!("Handler health ready");
 
     match timeout(HEALTH_READY_TIMEOUT, rm.test_connection()).await {
         // The timeout elapsed before the query finished

@@ -2,6 +2,7 @@ use axum::extract::Path;
 use axum::routing::{delete, post};
 use axum::Router;
 use axum::{extract::State, Json};
+use tracing::trace;
 
 use crate::app::AppState;
 use crate::model::transaction::{CreateTransactionDto, TransactionVo};
@@ -25,7 +26,7 @@ async fn create_transaction(
     State(_mc): State<RepositoryManager>,
     Json(_transaction_fc): Json<CreateTransactionDto>,
 ) -> Result<Json<TransactionVo>> {
-    tracing::debug!("{:<15} - create_transaction", "HANDLER");
+    trace!("Handler transaction create");
 
     todo!()
 }
@@ -33,7 +34,7 @@ async fn create_transaction(
 async fn list_transactions(
     State(_mc): State<RepositoryManager>,
 ) -> Result<Json<Vec<TransactionVo>>> {
-    tracing::debug!("{:<15} - list_transactions", "HANDLER");
+    trace!("Handler transaction list");
 
     todo!()
 }
@@ -42,7 +43,7 @@ async fn delete_transaction(
     State(_mc): State<RepositoryManager>,
     Path(_id): Path<i64>,
 ) -> Result<Json<()>> {
-    tracing::debug!("{:<15} - delete_transaction", "HANDLER");
+    trace!("Handler transaction delete");
 
     todo!()
 }
@@ -51,7 +52,7 @@ async fn get_transaction(
     State(_mc): State<RepositoryManager>,
     Path(_id): Path<i64>,
 ) -> Result<Json<TransactionVo>> {
-    tracing::debug!("{:<15} - get_transaction", "HANDLER");
+    trace!("Handler transaction get");
 
     todo!()
 }
