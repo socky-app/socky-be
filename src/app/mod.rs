@@ -25,8 +25,7 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
         ));
 
     let public_api = Router::new()
-        .nest("/auth", auth_router::public())
-        .nest("/hello", routes_hello());
+        .nest("/auth", auth_router::public());
 
     let router = Router::new()
         .nest("/api", protected_api.merge(public_api))
@@ -34,15 +33,4 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
         .with_state(state.clone()); // TODO: add fallback service returning 404 and JSON body?
 
     apply_trace_middleware(router)
-}
-
-// TODO: Remove later
-fn routes_hello() -> Router<AppState> {
-    Router::new().route(
-        "/",
-        get(|| async {
-            tracing::trace!("Handler /hello");
-            Html("Hello <strong>World!!!</strong>")
-        }),
-    )
 }
