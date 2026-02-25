@@ -21,6 +21,7 @@ use uuid::Uuid;
 use crate::context::{CurrentUser, ErrorDetails};
 
 // TODO: Implement logic to filter logs for dummy requests
+// TODO: Add CatchPanicLayer to handle panics
 
 /// Apply the global trace middleware to the router.
 pub fn apply_trace_middleware(router: Router) -> Router {
@@ -61,15 +62,16 @@ pub fn apply_trace_middleware(router: Router) -> Router {
                                 let chain_json = serde_json::to_string(&err.error_chain)
                                     .unwrap_or_else(|_| "[]".to_string());
                                 tracing::error!(
-                                    message = %err.error_message,
                                     client_msg = %err.client_message,
+                                    error_message = %err.error_message,
                                     error_type = %err.error_type,
                                     error_debug = %err.error_debug,
                                     err_chain = %chain_json,
+                                    "Server error processing request"
                                 );
                             } else {
                                 // Fallback: Catches framework-generated 500s or panics
-                                tracing::error!("server error processing request");
+                                tracing::error!("Server error processing request");
                             }
                         }
                         // 2. Client Errors (4xx) -> Always WARN
@@ -78,27 +80,29 @@ pub fn apply_trace_middleware(router: Router) -> Router {
                                 let chain_json = serde_json::to_string(&err.error_chain)
                                     .unwrap_or_else(|_| "[]".to_string());
                                 tracing::warn!(
-                                    message = %err.error_message,
                                     client_msg = %err.client_message,
+                                    error_message = %err.error_message,
                                     error_type = %err.error_type,
                                     error_debug = %err.error_debug,
                                     err_chain = %chain_json,
+                                    "Client error processing request"
                                 );
                             } else {
                                 // Fallback: Catches 404 Not Found, 400 Bad Request from Axum Extractors, etc.
-                                tracing::warn!("client error processing request");
+                                tracing::warn!("Client error processing request");
                             }
                         }
                         // 3. Success (2xx) -> INFO
                         else if status.is_success() {
-                            tracing::info!("request completed successfully");
+                            tracing::info!("Request completed successfully");
                         }
                         // 4. Redirects & Others (3xx, etc.) -> DEBUG or INFO
                         else {
-                            tracing::debug!("request finished with non-standard status");
+                            tracing::debug!("Request finished with non-standard status");
                         }
                     },
                 )
+                .on_request(())
                 .on_failure(()),
         )
         // Automatically grabs the `x-request-id` from the incoming request
