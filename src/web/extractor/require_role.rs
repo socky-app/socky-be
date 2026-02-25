@@ -23,12 +23,6 @@ where
         if (user.role as i16) >= MIN_ROLE {
             Ok(RequireRole(user))
         } else {
-            tracing::warn!(
-                "User {} (role: {:?}) blocked from route requiring role level: {}",
-                user.id,
-                user.role as i16,
-                MIN_ROLE
-            );
             Err(WebError::UserRole(UserRoleError {
                 required: MIN_ROLE,
                 current: user.role as i16,

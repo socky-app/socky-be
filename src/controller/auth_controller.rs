@@ -110,15 +110,7 @@ impl AuthController {
             &request.password,
             &auth_config.password_pepper,
         )
-        .await
-        .map_err(|e| {
-            tracing::warn!(
-                "Login verification failed for email={}: {:?}",
-                request.email,
-                e
-            );
-            e
-        })?;
+        .await?;
 
         let verification_time = start.elapsed();
         tracing::trace!(
@@ -197,12 +189,8 @@ impl AuthController {
 
         // 3. Reuse Detection (Security Critical)
         if token_entity.is_revoked {
-            tracing::warn!(
-                "Token reuse detected! Revoking family: {}",
-                token_entity.family_id
-            );
             TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
-            // Return generic error to avoid leaking implementation details
+            
             return Err(AuthError::RevokedToken {
                 token_id: token_entity.id,
                 user_id: token_entity.user_id,
