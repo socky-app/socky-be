@@ -51,7 +51,7 @@ impl TransactionRepository {
             .fetch_one(rm.pool())
             .await?;
 
-        tracing::trace!("transaction count: {:?}", count);
+        tracing::trace!("Transaction count: {:?}", count);
 
         Ok(count.0)
     }

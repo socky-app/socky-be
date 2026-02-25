@@ -174,7 +174,7 @@ pub fn validate_token<T: Claims>(token: &str, secret: &str) -> Result<T, TokenEr
     })?;
 
     tracing::trace!(
-        "Successfully verified {} token for user '{}'",
+        "Successfully verified {} token for user_id: {}",
         T::AUDIENCE,
         token_data.claims.user_id()
     );
