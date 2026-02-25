@@ -2,7 +2,6 @@
 
 mod error;
 pub mod auth_controller;
-pub mod log_controller;
 
 // Re-export module error and result.
 pub use error::ControllerError;

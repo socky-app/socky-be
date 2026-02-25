@@ -18,10 +18,9 @@ pub async fn auth_middleware(
 ) -> Result<Response> {
     tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE>>");
 
-    let (mut parts, body) = request.into_parts();
-
-    let token = parts
-        .headers
+    // Extract token cleanly
+    let token = request
+        .headers()
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .and_then(|s| s.strip_prefix("Bearer "));
@@ -30,12 +29,16 @@ pub async fn auth_middleware(
     let claims = AuthController::verify_access_token(token, &app_config.auth)?;
 
     // Create the user
+    // TODO: Check if CurrentUser should be wrapped in and Arc
     let current_user = CurrentUser::from(claims);
 
-    // Insert into request extensions for dowstream handlers
-    parts.extensions.insert(current_user.clone());
+    // Insert user_id into current span
+    tracing::Span::current().record("user_id", current_user.id);
 
-    let request = Request::from_parts(parts, body);
+    // Insert into request extensions for dowstream handlers
+    request.extensions_mut().insert(current_user.clone());
+
+    // Execute downstream handlers
     let mut response = next.run(request).await;
 
     tracing::debug!("{:<15} - auth_middleware", "MIDDLEWARE<<");

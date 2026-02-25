@@ -34,12 +34,25 @@ async fn main() {
     // Load env
     dotenvy::dotenv().ok();
 
-    // Initialize logger
-    tracing_subscriber::fmt()
-        .without_time() // TODO: For early local development.
-        .with_target(false)
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+    if cfg!(debug_assertions) {
+        // Local development: human-readable, pretty console output
+        tracing_subscriber::fmt()
+            .pretty() // Formats multi-line, colorized output
+            .without_time() // Fine for local dev!
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .init();
+    } else {
+        // Production: strict, flat JSON for log aggregators
+        tracing_subscriber::fmt()
+            .json()
+            .flatten_event(true)
+            .with_current_span(true)
+            .with_span_list(false)
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .init();
+    }
 
     if let Err(e) = run().await {
         tracing::error!("Application finished with error: {}", e);

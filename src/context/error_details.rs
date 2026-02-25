@@ -3,7 +3,7 @@ use serde::Serialize;
 /// Error details used during request logging.
 #[derive(Serialize, Debug)]
 pub struct ErrorDetails {
-    pub message: String,
+    pub error_message: String,
     pub error_type: String,
     pub error_debug: String,
     pub error_chain: Vec<ErrorLevel>,
@@ -19,14 +19,14 @@ impl std::fmt::Display for ErrorDetails {
 #[derive(Serialize, Debug)]
 pub struct ErrorLevel {
     pub depth: usize,
-    pub error_type: String, 
+    pub error_type: String,
     pub message: String,
 }
 
 impl ErrorDetails {
     pub fn new(err: &dyn std::error::Error, client_message: String) -> Self {
         let error_chain = extract_error_chain(err);
-        
+
         // Build the dotted path by mapping over the extracted types
         let error_type_path = error_chain
             .iter()
@@ -35,7 +35,7 @@ impl ErrorDetails {
             .join(".");
 
         Self {
-            message: err.to_string(),
+            error_message: err.to_string(),
             error_type: error_type_path,
             error_debug: format!("{:?}", err),
             error_chain,
@@ -56,11 +56,11 @@ fn extract_error_chain(err: &dyn std::error::Error) -> Vec<ErrorLevel> {
             error_type: extract_type_name(e),
             message: e.to_string(),
         });
-        
+
         current_err = e.source();
         depth += 1;
     }
-    
+
     chain
 }
 
@@ -70,6 +70,6 @@ fn extract_type_name(err: &dyn std::error::Error) -> String {
     let end_index = debug_str
         .find(|c: char| !c.is_alphanumeric() && c != '_')
         .unwrap_or(debug_str.len());
-        
+
     debug_str[..end_index].to_string()
 }

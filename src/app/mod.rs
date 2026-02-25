@@ -4,7 +4,7 @@ use crate::{
     config::AppConfig,
     repository::RepositoryManager,
     web::{
-        auth_router, health_router, middleware::{auth_middleware, request_middleware}
+        auth_router, health_router, middleware::{apply_trace_middleware, auth_middleware}
     },
 };
 
@@ -28,12 +28,12 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
         .nest("/auth", auth_router::public())
         .nest("/hello", routes_hello());
 
-    Router::new()
+    let router = Router::new()
         .nest("/api", protected_api.merge(public_api))
         .nest("/health", health_router::public())
-        .layer(middleware::from_fn(request_middleware)) // TODO: Implement logic to filter logs for dummy requests, maybe use TraceLayer
-        .with_state(state.clone())
-    // TODO: add fallback service returning 404 and JSON body?
+        .with_state(state.clone()); // TODO: add fallback service returning 404 and JSON body?
+
+    apply_trace_middleware(router)
 }
 
 // TODO: Remove later
