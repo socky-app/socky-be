@@ -40,10 +40,7 @@ where
     let ret_option = query_builder
         .build_query_scalar::<i64>()
         .fetch_optional(executor)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error updating {}: {:?}", R::TABLE, e);
-        })?;
+        .await?;
 
     if let Some(ret_id) = ret_option {
         Ok(ret_id)

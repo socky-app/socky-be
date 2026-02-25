@@ -25,10 +25,7 @@ where
     let ret_option = query_builder
         .build_query_as::<T>()
         .fetch_optional(executor)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error getting {}: {:?}", R::TABLE, e);
-        })?;
+        .await?;
 
     if let Some(entity) = ret_option {
         Ok(entity)

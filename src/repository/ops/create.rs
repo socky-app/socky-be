@@ -31,10 +31,7 @@ where
     let id = query_builder
         .build_query_scalar::<i64>()
         .fetch_one(executor)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error creating {}: {:?}", R::TABLE, e);
-        })?;
+        .await?;
 
     Ok(id)
 }

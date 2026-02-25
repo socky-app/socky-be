@@ -14,6 +14,3 @@ mod web;
 
 // Re-export create_app function
 pub use app::create_app;
-
-
-// TODO: Review error handling conversation and remove error! logs

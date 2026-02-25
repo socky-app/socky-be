@@ -29,10 +29,7 @@ where
     let deleted = query_builder
         .build_query_scalar::<i64>()
         .fetch_all(executor)
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error soft deleting {}: {:?}", R::TABLE, e);
-        })?;
+        .await?;
 
     if deleted.is_empty() {
         Err(RepositoryError::NotFound {

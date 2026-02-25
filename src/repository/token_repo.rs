@@ -38,10 +38,7 @@ impl TokenRepository {
         ))
         .bind(hash)
         .fetch_optional(rm.pool())
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error fetching token by hash: {:?}", e);
-        })?;
+        .await?;
 
         Ok(result)
     }
@@ -54,10 +51,7 @@ impl TokenRepository {
         .bind(true)
         .bind(family_id)
         .execute(rm.pool())
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error revoking family {}: {:?}", family_id, e);
-        })?;
+        .await?;
 
         Ok(())
     }
@@ -84,14 +78,7 @@ impl TokenRepository {
         .bind(true)
         .bind(id)
         .fetch_optional(executor)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-                "Database error in invalidate_token, token_id={}: {:?}",
-                id,
-                e
-            );
-        })?;
+        .await?;
 
         if let Some(ret_id) = ret_option {
             Ok(ret_id)

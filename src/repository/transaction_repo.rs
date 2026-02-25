@@ -49,10 +49,7 @@ impl TransactionRepository {
         let count: (i64,) = query_builder
             .build_query_as()
             .fetch_one(rm.pool())
-            .await
-            .inspect_err(|e| {
-                tracing::error!("Database error counting transactions: {:?}", e);
-            })?;
+            .await?;
 
         tracing::trace!("transaction count: {:?}", count);
 
@@ -87,10 +84,7 @@ impl TransactionRepository {
         let transactions = query_builder
             .build_query_as()
             .fetch_all(rm.pool())
-            .await
-            .inspect_err(|e| {
-                tracing::error!("Database error in transaction pagination: {:?}", e);
-            })?;
+            .await?;
 
         Ok((transactions, total))
     }

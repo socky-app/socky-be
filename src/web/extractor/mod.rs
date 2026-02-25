@@ -28,11 +28,6 @@ where
             .extensions
             .get::<CurrentUser>()
             .cloned()
-            .ok_or_else(|| {
-                tracing::error!(
-                    "CurrentUser not found, auth middleware missing"
-                );
-                WebError::UserExtraction
-            })
+            .ok_or(WebError::UserExtraction)
     }
 }

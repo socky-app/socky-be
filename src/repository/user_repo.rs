@@ -83,10 +83,7 @@ impl UserRepository {
             email
         )
         .fetch_optional(rm.pool())
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Database error getting login credentials: {:?}", e);
-        })?;
+        .await?;
 
         Ok(user)
     }
@@ -97,14 +94,7 @@ impl UserRepository {
             .bind(Utc::now().naive_utc())
             .bind(id)
             .execute(rm.pool())
-            .await
-            .inspect_err(|e| {
-                tracing::error!(
-                    "Database error in update_last_login, user_id={}: {:?}",
-                    id,
-                    e
-                );
-            })?;
+            .await?;
 
         Ok(())
     }

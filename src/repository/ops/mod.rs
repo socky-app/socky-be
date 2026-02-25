@@ -41,14 +41,7 @@ pub trait DatabaseTable {
             let exists = sqlx::query_scalar::<_, bool>(&sql)
                 .bind(value)
                 .fetch_one(rm.pool())
-                .await
-                .inspect_err(|e| {
-                    tracing::error!(
-                        "Database error checking existance on {}: {:?}",
-                        Self::TABLE,
-                        e
-                    );
-                })?;
+                .await?;
 
             Ok(exists)
         }
