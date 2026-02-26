@@ -22,6 +22,9 @@ pub enum WebError {
     #[error(transparent)]
     Controller(#[from] ControllerError),
 
+    #[error("missing authorization bearer")]
+    AuthorizationBearer,
+
     #[error("current user missing in request parts")]
     UserExtraction,
 
@@ -81,15 +84,14 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "An unexpected internal error occurred.".to_string(),
                 ),
-                AuthError::InvalidEmail {..} | AuthError::InvalidPassword {..} => (
+                AuthError::InvalidEmail { .. } | AuthError::InvalidPassword { .. } => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid email or password.".to_string(),
                 ),
-                AuthError::MissingToken
-                | AuthError::NotFoundToken
+                AuthError::NotFoundToken
                 | AuthError::InvalidToken
                 | AuthError::ExpiredToken
-                | AuthError::RevokedToken {..} => (
+                | AuthError::RevokedToken { .. } => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid or expired token.".to_string(),
                 ),
@@ -118,6 +120,11 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 "An unexpected internal error occurred.".to_string(),
             ),
         },
+
+        WebError::AuthorizationBearer => (
+            StatusCode::UNAUTHORIZED,
+            "Invalid or expired token.".to_string(),
+        ),
 
         // We return internal server error here because this indicates a misconfigured route,
         // that should be under the auth_middleware.

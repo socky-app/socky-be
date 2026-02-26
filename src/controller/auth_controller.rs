@@ -38,9 +38,6 @@ pub enum AuthError {
     #[error("invalid password for user {user_id} {email}")]
     InvalidPassword { user_id: i64, email: String },
 
-    #[error("missing token")]
-    MissingToken,
-
     #[error("token not found")]
     NotFoundToken,
 
@@ -265,11 +262,9 @@ impl AuthController {
     /// Verify if the access token is valid.
     #[tracing::instrument(name = "auth_verify_token", skip_all)]
     pub fn verify_access_token(
-        token: Option<&str>, // TODO: review the logic here so that we don't need the optional
+        token: &str,
         auth_config: &AuthConfig,
     ) -> Result<AccessClaims> {
-        let token = token.ok_or(AuthError::MissingToken)?;
-
         let claims = token::validate_token::<AccessClaims>(
             token,
             auth_config.access_token_secret.expose_secret(),

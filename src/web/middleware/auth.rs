@@ -6,10 +6,13 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use tracing::{Span, trace};
+use tracing::{trace, Span};
 
 use crate::{
-    config::AppConfig, context::CurrentUser, controller::auth_controller::AuthController, web::Result,
+    config::AppConfig,
+    context::CurrentUser,
+    controller::auth_controller::AuthController,
+    web::{Result, WebError},
 };
 
 pub async fn auth_middleware(
@@ -24,7 +27,8 @@ pub async fn auth_middleware(
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "));
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .ok_or(WebError::AuthorizationBearer)?;
 
     // Validate token
     let claims = AuthController::verify_access_token(token, &app_config.auth)?;
