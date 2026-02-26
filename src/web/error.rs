@@ -36,6 +36,9 @@ pub enum WebError {
 
     #[error("{0}")]
     Panic(String),
+
+    #[error("{0}")]
+    NotFound(String),
 }
 
 impl IntoResponse for WebError {
@@ -144,5 +147,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
             StatusCode::INTERNAL_SERVER_ERROR,
             "An unexpected internal error occurred.".to_string(),
         ),
+
+        WebError::NotFound(_) => (StatusCode::NOT_FOUND, "Resource not found.".to_string()),
     }
 }
