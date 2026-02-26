@@ -11,15 +11,6 @@ pub struct CurrentUser {
     pub role: UserRole,
 }
 
-impl CurrentUser {
-    pub fn new(id: i64, role: UserRole) -> Self {
-        Self {
-            id,
-            role,
-        }
-    }
-}
-
 impl From<AccessClaims> for CurrentUser {
     fn from(value: AccessClaims) -> Self {
         Self {
