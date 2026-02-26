@@ -31,6 +31,9 @@ pub enum WebError {
 
     #[error("insuficient permission")]
     UserRole(#[from] UserRoleError),
+
+    #[error("{0}")]
+    Panic(String),
 }
 
 impl IntoResponse for WebError {
@@ -129,6 +132,11 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
         WebError::Health(_) => (
             StatusCode::SERVICE_UNAVAILABLE,
             "Service is temporarily unavailable.".to_string(),
+        ),
+
+        WebError::Panic(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "An unexpected internal error occurred.".to_string(),
         ),
     }
 }

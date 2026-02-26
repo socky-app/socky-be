@@ -1,5 +1,5 @@
 mod auth;
-mod trace;
+mod core;
 
 pub use auth::auth_middleware;
-pub use trace::apply_trace_middleware;
+pub use core::apply_core_middleware;

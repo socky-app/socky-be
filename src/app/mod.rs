@@ -4,7 +4,8 @@ use crate::{
     config::AppConfig,
     repository::RepositoryManager,
     web::{
-        auth_router, health_router, middleware::{apply_trace_middleware, auth_middleware}
+        auth_router, health_router,
+        middleware::{apply_core_middleware, auth_middleware},
     },
 };
 
@@ -24,13 +25,12 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
             auth_middleware,
         ));
 
-    let public_api = Router::new()
-        .nest("/auth", auth_router::public());
+    let public_api = Router::new().nest("/auth", auth_router::public());
 
     let router = Router::new()
         .nest("/api", protected_api.merge(public_api))
         .nest("/health", health_router::public())
         .with_state(state.clone()); // TODO: add fallback service returning 404 and JSON body?
 
-    apply_trace_middleware(router)
+    apply_core_middleware(router)
 }
