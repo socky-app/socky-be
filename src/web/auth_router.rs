@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Request, State},
-    http::header,
+    extract::State,
     routing::{get, post},
     Json, Router,
 };
-use serde_json::json;
 use tracing::trace;
 
 use crate::{
@@ -88,7 +86,7 @@ async fn me_handler(
 
 /// Check user authentication.
 async fn health_handler(
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
 ) -> Result<()> {
     trace!("Handler auth health");
     Ok(())

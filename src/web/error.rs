@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::format, sync::Arc};
+use std::sync::Arc;
 
 use axum::{
     http::StatusCode,
@@ -6,7 +6,6 @@ use axum::{
     Json,
 };
 use serde::Serialize;
-use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::{
@@ -68,7 +67,7 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
     match error {
         WebError::Controller(controller_error) => match controller_error {
             ControllerError::Repository(e) => match e {
-                RepositoryError::NotFound { entity, id } => {
+                RepositoryError::NotFound { entity: _, id: _ } => {
                     (StatusCode::NOT_FOUND, "Resource not found.".to_string())
                 }
                 RepositoryError::DatabaseQueryFailed(_) => (

@@ -3,12 +3,8 @@ use std::{any::Any, sync::Arc};
 use axum::{
     body::Body,
     extract::Request,
-    http::{Method, StatusCode, Uri},
-    middleware::Next,
-    response::{IntoResponse, Response},
-    Json, Router,
+    response::{IntoResponse, Response}, Router,
 };
-use serde_json::json;
 use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -17,10 +13,9 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing::{debug, error, field, info, info_span, warn, Span};
-use uuid::Uuid;
 
 use crate::{
-    context::{CurrentUser, ErrorDetails},
+    context::ErrorDetails,
     web::WebError,
 };
 

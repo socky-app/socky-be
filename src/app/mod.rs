@@ -1,4 +1,4 @@
-use axum::{middleware, response::Html, routing::get, Router};
+use axum::{middleware, Router};
 
 use crate::{
     config::AppConfig,

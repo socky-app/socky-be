@@ -1,4 +1,3 @@
-use std::thread::AccessError;
 
 use secrecy::{ExposeSecret, SecretString};
 
@@ -13,19 +12,18 @@ use crate::{
         refresh_token::CreateRefreshTokenDto,
         user::{
             dto::LoginRequestDto,
-            error::UserStatusError,
             vo::{AuthResponseVo, LoggedUserInfoVo},
-            LoginCredentialsEntity, UserEntity, UserStatus,
+            LoginCredentialsEntity, UserEntity,
         },
     },
     repository::{
-        token_repo::TokenRepository, user_repo::UserRepository, Create, Get, RepositoryError,
+        token_repo::TokenRepository, user_repo::UserRepository, Create, Get,
         RepositoryManager,
     },
     utils::{
         hmac,
         password::{PasswordError, PasswordUtils},
-        token::{self, AccessClaims, Claims, TokenError},
+        token::{self, AccessClaims, TokenError},
     },
 };
 

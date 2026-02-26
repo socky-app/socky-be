@@ -2,7 +2,7 @@ use axum::{extract::FromRequestParts, http::request::Parts};
 
 use crate::{
     context::CurrentUser,
-    model::user::{error::UserRoleError, UserRole},
+    model::user::error::UserRoleError,
     web::WebError,
 };
 

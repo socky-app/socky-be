@@ -3,7 +3,6 @@ use crate::{
     utils::token::{AccessClaims, Claims},
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Current authenticated user info
 #[derive(Debug, Clone, Serialize, Deserialize)]
