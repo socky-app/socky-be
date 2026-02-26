@@ -34,7 +34,6 @@ pub async fn auth_middleware(
     let claims = AuthController::verify_access_token(token, &app_config.auth)?;
 
     // Create the user
-    // TODO: Check if CurrentUser should be wrapped in and Arc
     let current_user = CurrentUser::from(claims);
 
     // Insert user info into current span
@@ -42,7 +41,8 @@ pub async fn auth_middleware(
     Span::current().record("user_role", current_user.role as i16);
 
     // Insert into request extensions for dowstream handlers
-    request.extensions_mut().insert(current_user.clone());
+    // No need for Arc, since it's just a small POD struct
+    request.extensions_mut().insert(current_user);
 
     // Execute downstream handlers
     let mut response = next.run(request).await;
