@@ -41,11 +41,14 @@ impl TokenRepository {
         rm: &RepositoryManager,
         hash: &[u8],
     ) -> Result<Option<RefreshTokenEntity>> {
-        let result = sqlx::query_as::<_, RefreshTokenEntity>(&format!(
-            "SELECT * FROM {} WHERE token_hash = $1",
-            Self::TABLE
-        ))
-        .bind(hash)
+        let result = sqlx::query_as!(
+            RefreshTokenEntity,
+            r#"
+            SELECT * FROM refresh_tokens 
+            WHERE token_hash = $1
+            "#,
+            hash
+        )
         .fetch_optional(rm.pool())
         .await?;
 
@@ -53,12 +56,14 @@ impl TokenRepository {
     }
 
     pub async fn revoke_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
-        sqlx::query(&format!(
-            "UPDATE {} SET is_revoked = $1 WHERE family_id = $2",
-            Self::TABLE
-        ))
-        .bind(true)
-        .bind(family_id)
+        sqlx::query!(
+            r#"
+            UPDATE refresh_tokens 
+            SET is_revoked = true 
+            WHERE family_id = $1 AND is_revoked = false
+            "#,
+            family_id
+        )
         .execute(rm.pool())
         .await?;
 
@@ -123,12 +128,15 @@ impl TokenRepository {
     where
         E: Executor<'c, Database = Postgres> + Send,
     {
-        let ret_option = sqlx::query_scalar::<_, i64>(&format!(
-            "UPDATE {} SET is_revoked = $1 WHERE id = $2 RETURNING id",
-            Self::TABLE
-        ))
-        .bind(true)
-        .bind(id)
+        let ret_option = sqlx::query_scalar!(
+            r#"
+            UPDATE refresh_tokens
+            SET is_revoked = true
+            WHERE id = $1 AND is_revoked = false
+            RETURNING id
+            "#,
+            id
+        )
         .fetch_optional(executor)
         .await?;
 

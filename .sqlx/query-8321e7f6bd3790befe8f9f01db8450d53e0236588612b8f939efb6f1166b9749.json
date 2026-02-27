@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE refresh_tokens\n            SET is_revoked = true\n            WHERE id = $1 AND is_revoked = false\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8321e7f6bd3790befe8f9f01db8450d53e0236588612b8f939efb6f1166b9749"
+}

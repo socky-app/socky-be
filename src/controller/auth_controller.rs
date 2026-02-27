@@ -11,14 +11,11 @@ use crate::{
     model::{
         refresh_token::CreateRefreshTokenDto,
         user::{
-            dto::LoginRequestDto,
-            vo::{AuthResponseVo, LoggedUserInfoVo},
-            LoginCredentialsEntity, UserEntity,
+            LoginCredentialsEntity, UserEntity, dto::LoginRequestDto, vo::{AuthResponseVo, LoggedUserInfoVo}
         },
     },
     repository::{
-        token_repo::TokenRepository, user_repo::UserRepository, Create, Get,
-        RepositoryManager,
+        Create, Get, RepositoryError, RepositoryManager, token_repo::TokenRepository, user_repo::UserRepository
     },
     utils::{
         hmac,
@@ -56,6 +53,9 @@ pub enum AuthError {
 
     #[error("token creation failed")]
     TokenCreationFailed,
+
+    #[error("concurrent refreshes using same token")]
+    ConcurrentRefresh,
 }
 
 impl From<TokenError> for AuthError {
@@ -146,6 +146,8 @@ impl AuthController {
         })
     }
 
+    // TODO: Create background task to periodically clean up dead tokens
+
     /// Refresh tokens.
     #[tracing::instrument(name = "auth_refresh", skip_all)]
     pub async fn refresh(
@@ -211,20 +213,42 @@ impl AuthController {
             expires_at: new_tokens.refresh_expires_at,
         };
 
-        TokenRepository::rotate(rm, &create_dto, token_entity.id).await?;
+        let result = TokenRepository::rotate(rm, &create_dto, token_entity.id).await;
 
-        debug!(
-            user_id = %user_info.id,
-            user_role = user_info.role as i16,
-            "Refresh successful",
-        );
+        // 8. Handle happy path and rotation errors
+        match result {
+            Ok(_) => {
+                debug!(
+                    user_id = %user_info.id,
+                    user_role = user_info.role as i16,
+                    "Refresh successful",
+                );
 
-        // 8. Return new tokens
-        Ok(AuthResponseVo {
-            access_token: new_tokens.access_token,
-            refresh_token: new_tokens.refresh_token,
-            user_info,
-        })
+                Ok(AuthResponseVo {
+                    access_token: new_tokens.access_token,
+                    refresh_token: new_tokens.refresh_token,
+                    user_info,
+                })
+            }
+            Err(e) => {
+                // Check if the error is our specific NotFound error from the race condition
+                if let RepositoryError::NotFound { .. } = e {
+                    tracing::warn!(
+                        user_id = %token_entity.user_id,
+                        family_id = %token_entity.family_id,
+                        "Concurrent refresh detected. Rotation blocked."
+                    );
+                    
+                    // Return a custom auth error that translates to a 401 Unauthorized
+                    // so the client knows they need to log in again or use the token 
+                    // from the other concurrent request.
+                    Err(AuthError::ConcurrentRefresh.into())
+                } else {
+                    // If it's a different database error (e.g., connection dropped), bubble it up
+                    Err(e.into())
+                }
+            }
+        }
     }
 
     /// Logout user.

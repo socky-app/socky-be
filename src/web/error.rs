@@ -94,7 +94,8 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
                 AuthError::NotFoundToken
                 | AuthError::InvalidToken
                 | AuthError::ExpiredToken
-                | AuthError::RevokedToken { .. } => (
+                | AuthError::RevokedToken { .. }
+                | AuthError::ConcurrentRefresh => (
                     StatusCode::UNAUTHORIZED,
                     "Invalid or expired token.".to_string(),
                 ),
