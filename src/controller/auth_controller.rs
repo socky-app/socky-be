@@ -42,7 +42,7 @@ pub enum AuthError {
     InvalidToken,
 
     #[error("expired token")]
-    ExpiredToken, // TODO: Add user_id and other info to expired token entity
+    ExpiredToken,
 
     #[error("revoked token: {token_id} family {family_id} user {user_id} ")]
     RevokedToken {

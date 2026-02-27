@@ -19,8 +19,6 @@ use crate::{
     web::WebError,
 };
 
-// TODO: Implement logic to filter logs for dummy requests
-
 /// Apply the global trace middleware to the router.
 pub fn apply_core_middleware(router: Router) -> Router {
     let middleware = ServiceBuilder::new()
