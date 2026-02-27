@@ -15,6 +15,14 @@ pub struct RefreshTokenEntity {
     pub updated_at: NaiveDateTime,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RevokedTokenEntity {
+    pub id: i64,
+    pub user_id: i64,
+    pub family_id: Uuid,
+    pub was_already_revoked: bool,
+}
+
 /// Token creation parameters.
 #[derive(Debug, Clone)]
 pub struct CreateRefreshTokenDto<'a> {

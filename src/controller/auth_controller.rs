@@ -241,19 +241,26 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        // 2. Find the token to get its Family ID
-        // If it's already gone/invalid, we can just return Ok (idempotent)
-        // TODO: This logic can be optimized and transformed into a single SQL query
-        if let Some(token_entity) = TokenRepository::get_by_hash(rm, &token_hash).await? {
-            // 3. Revoke the entire Family
-            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
-            debug!(
-                user_id = token_entity.user_id,
-                family_id = %token_entity.family_id,
-                "Token family revoked"
-            );
+        // 2. Perform the get and revoke in a single atomic database query
+        if let Some(info) = TokenRepository::revoke_family_by_hash(rm, &token_hash).await? {
+            if info.was_already_revoked {
+                // This is a red flag in a token rotation setup
+                tracing::warn!(
+                    user_id = %info.user_id,
+                    family_id = %info.family_id,
+                    "Logout attempted with an ALREADY REVOKED token. Possible replay attack or client retry."
+                );
+            } else {
+                // Normal, happy-path logout
+                tracing::debug!(
+                    user_id = %info.user_id,
+                    family_id = %info.family_id,
+                    "Token family successfully revoked"
+                );
+            }
         } else {
-            debug!("Refresh token not found");
+            // The token literally does not exist in the database
+            tracing::debug!("Refresh token not found");
         }
 
         Ok(())
