@@ -11,35 +11,8 @@ pub struct CreateUserDto {
     pub status: UserStatus,
 }
 
-/// Request payload for user authentication.
-#[derive(Deserialize)]
-pub struct LoginRequestDto {
-    /// Email for authentication
-    pub email: String,
-    /// User's password in plain text
-    pub password: String,
-}
-
-#[derive(Deserialize)]
-pub struct RefreshRequestDto {
-    /// Refresh token
-    pub refresh_token: String,
-}
-
-#[derive(Deserialize)]
-pub struct LogoutRequestDto {
-    /// Refresh token
-    pub refresh_token: String,
-}
-
 /// Update user request parameters.
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateUserStatusDto {
     pub status: UserStatus,
-}
-
-/// Update user password request parameters.
-#[derive(Debug, Clone, Deserialize)]
-pub struct UpdateUserPasswordDto {
-    pub password: String,
 }

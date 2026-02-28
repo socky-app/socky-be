@@ -5,7 +5,7 @@ mod helper;
 mod ops;
 mod manager;
 
-pub mod token_repo;
+pub mod auth_repo;
 pub mod transaction_repo;
 pub mod user_repo;
 

@@ -11,7 +11,7 @@ use crate::{
     app::AppState,
     config::AppConfig,
     context::CurrentUser,
-    model::user::{
+    model::auth::{
         dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto},
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },

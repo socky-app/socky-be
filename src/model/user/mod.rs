@@ -20,15 +20,6 @@ pub struct UserEntity {
     pub updated_at: NaiveDateTime,
 }
 
-/// Minimal user info for login.
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct LoginCredentialsEntity {
-    pub id: i64,
-    pub password_hash: String,
-    pub role: UserRole,
-    pub status: UserStatus,
-}
-
 /// User role enum for access control.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[repr(i16)]

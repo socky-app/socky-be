@@ -1,4 +1,3 @@
-
 use secrecy::{ExposeSecret, SecretString};
 
 use thiserror::Error;
@@ -9,13 +8,16 @@ use crate::{
     config::AuthConfig,
     controller::{ControllerError, Result},
     model::{
-        refresh_token::CreateRefreshTokenDto,
-        user::{
-            LoginCredentialsEntity, UserEntity, dto::LoginRequestDto, vo::{AuthResponseVo, LoggedUserInfoVo}
+        auth::{
+            dto::{CreateRefreshTokenDto, LoginRequestDto},
+            vo::{AuthResponseVo, LoggedUserInfoVo},
+            LoginCredentialsEntity,
         },
+        user::UserEntity,
     },
     repository::{
-        Create, Get, RepositoryError, RepositoryManager, token_repo::TokenRepository, user_repo::UserRepository
+        auth_repo::AuthRepository, user_repo::UserRepository, Create, Get, RepositoryError,
+        RepositoryManager,
     },
     utils::{
         hmac,
@@ -122,13 +124,13 @@ impl AuthController {
             token_hash: &refresh_token_hash,
             expires_at: tokens.refresh_expires_at,
         };
-        let _ = TokenRepository::create(rm, &create_dto).await?;
+        let _ = AuthRepository::create_token(rm, &create_dto).await?;
 
         // 5. Update last login time (fire & forget)
         {
             let rm_clone = rm.clone();
             tokio::spawn(async move {
-                let _ = UserRepository::update_last_login(&rm_clone, credentials.id).await;
+                let _ = AuthRepository::update_last_login(&rm_clone, credentials.id).await;
             });
         }
 
@@ -164,13 +166,13 @@ impl AuthController {
 
         // 2. Fetch token record
         // We need to know if it exists to check for reuse or expiration
-        let token_entity = TokenRepository::get_by_hash(rm, &input_token_hash)
+        let token_entity = AuthRepository::get_token_by_hash(rm, &input_token_hash)
             .await?
             .ok_or(AuthError::NotFoundToken)?;
 
         // 3. Reuse Detection (Security Critical)
         if token_entity.is_revoked {
-            TokenRepository::revoke_family(rm, &token_entity.family_id).await?;
+            AuthRepository::revoke_token_family(rm, &token_entity.family_id).await?;
 
             return Err(AuthError::RevokedToken {
                 token_id: token_entity.id,
@@ -213,7 +215,7 @@ impl AuthController {
             expires_at: new_tokens.refresh_expires_at,
         };
 
-        let result = TokenRepository::rotate(rm, &create_dto, token_entity.id).await;
+        let result = AuthRepository::rotate_token(rm, &create_dto, token_entity.id).await;
 
         // 8. Handle happy path and rotation errors
         match result {
@@ -238,9 +240,9 @@ impl AuthController {
                         family_id = %token_entity.family_id,
                         "Concurrent refresh detected. Rotation blocked."
                     );
-                    
+
                     // Return a custom auth error that translates to a 401 Unauthorized
-                    // so the client knows they need to log in again or use the token 
+                    // so the client knows they need to log in again or use the token
                     // from the other concurrent request.
                     Err(AuthError::ConcurrentRefresh.into())
                 } else {
@@ -266,7 +268,7 @@ impl AuthController {
         .map_err(AuthError::from)?;
 
         // 2. Perform the get and revoke in a single atomic database query
-        if let Some(info) = TokenRepository::revoke_family_by_hash(rm, &token_hash).await? {
+        if let Some(info) = AuthRepository::revoke_token_family_by_hash(rm, &token_hash).await? {
             if info.was_already_revoked {
                 // This is a red flag in a token rotation setup
                 tracing::warn!(
@@ -292,10 +294,7 @@ impl AuthController {
 
     /// Verify if the access token is valid.
     #[tracing::instrument(name = "auth_verify_token", skip_all)]
-    pub fn verify_access_token(
-        token: &str,
-        auth_config: &AuthConfig,
-    ) -> Result<AccessClaims> {
+    pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<AccessClaims> {
         let claims = token::validate_token::<AccessClaims>(
             token,
             auth_config.access_token_secret.expose_secret(),
@@ -326,7 +325,7 @@ impl AuthController {
         pepper: &SecretString,
     ) -> Result<LoginCredentialsEntity> {
         // 1. Get login credentials
-        let user = UserRepository::get_login_credentials(rm, email)
+        let user = AuthRepository::get_login_credentials(rm, email)
             .await?
             .ok_or(AuthError::InvalidEmail {
                 email: email.to_string(),

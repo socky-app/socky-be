@@ -1,43 +1,100 @@
+use chrono::Utc;
 use sqlx::{Executor, Postgres};
 use uuid::Uuid;
 
 use crate::{
-    model::refresh_token::{CreateRefreshTokenDto, RefreshTokenEntity, RevokedTokenEntity},
+    model::{
+        auth::{
+            dto::CreateRefreshTokenDto, LoginCredentialsEntity, RefreshTokenEntity,
+            RevokedTokenEntity,
+        },
+        user::{UserRole, UserStatus},
+    },
     repository::{
         helper::{commit_db_transaction, start_db_transaction},
         ops::{
             create::{create, Create, Insertable},
-            delete::Delete,
+            delete::{delete, Delete},
             delete_strategy::HardDeleteStrategy,
-            get::Get,
+            get::{get, Get},
             DatabaseTable,
         },
         RepositoryError, RepositoryManager, Result,
     },
 };
 
-/// Token repository for database operations.
-pub struct TokenRepository;
+/// Auth repository for database operations.
+pub struct AuthRepository;
 
-impl DatabaseTable for TokenRepository {
+/// Token repository for database operations.
+struct TokenTable;
+
+impl DatabaseTable for TokenTable {
     const TABLE: &'static str = "refresh_tokens";
-    // Note: The refresh_token table must not implement SoftDeleteStrategy,
+    // Note: The refresh_tokens table must not implement SoftDeleteStrategy,
     // otherwise the logic in get_by_hash and revoke_family would have to change.
     type DeleteStrategy = HardDeleteStrategy;
 }
 
-impl Create for TokenRepository {
-    type D<'a> = CreateRefreshTokenDto<'a>;
+/// User related implementation
+impl AuthRepository {
+    /// Get user by email for authentication (only essential fields)
+    pub async fn get_login_credentials(
+        rm: &RepositoryManager,
+        email: &str,
+    ) -> Result<Option<LoginCredentialsEntity>> {
+        let user = sqlx::query_as!(
+            LoginCredentialsEntity,
+            r#"
+            SELECT 
+                id, 
+                password_hash, 
+                role AS "role: UserRole", 
+                status AS "status: UserStatus"
+            FROM users 
+            WHERE email = $1 
+            AND deleted_at IS NULL
+            "#,
+            email
+        )
+        .fetch_optional(rm.pool())
+        .await?;
+
+        Ok(user)
+    }
+
+    /// Update last login timestamp
+    pub async fn update_last_login(rm: &RepositoryManager, id: i64) -> Result<()> {
+        sqlx::query!(
+            r#"UPDATE users SET last_login_at = $1 WHERE id = $2"#,
+            Utc::now().naive_utc(),
+            id
+        )
+        .execute(rm.pool())
+        .await?;
+
+        Ok(())
+    }
 }
 
-impl Get for TokenRepository {
-    type T = RefreshTokenEntity;
-}
+/// Token related implementation
+impl AuthRepository {
+    pub async fn create_token<'a>(
+        rm: &RepositoryManager,
+        dto: &CreateRefreshTokenDto<'a>,
+    ) -> Result<i64> {
+        create::<TokenTable, _, _>(dto, rm.pool()).await
+    }
 
-impl Delete for TokenRepository {}
+    pub async fn get_token(rm: &RepositoryManager, id: i64) -> Result<RefreshTokenEntity> {
+        get::<TokenTable, _, _>(id, rm.pool()).await
+    }
 
-impl TokenRepository {
-    pub async fn get_by_hash(
+    pub async fn delete_token(rm: &RepositoryManager, id: i64) -> Result<()> {
+        delete::<TokenTable, _>(id, rm.pool()).await
+    }
+
+    pub async fn get_token_by_hash(
         rm: &RepositoryManager,
         hash: &[u8],
     ) -> Result<Option<RefreshTokenEntity>> {
@@ -55,7 +112,7 @@ impl TokenRepository {
         Ok(result)
     }
 
-    pub async fn revoke_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
+    pub async fn revoke_token_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE refresh_tokens 
@@ -70,7 +127,7 @@ impl TokenRepository {
         Ok(())
     }
 
-    pub async fn revoke_family_by_hash(
+    pub async fn revoke_token_family_by_hash(
         rm: &RepositoryManager,
         token_hash: &[u8],
     ) -> Result<Option<RevokedTokenEntity>> {
@@ -109,22 +166,22 @@ impl TokenRepository {
         Ok(result)
     }
 
-    pub async fn rotate(
+    pub async fn rotate_token(
         rm: &RepositoryManager,
         dto: &CreateRefreshTokenDto<'_>,
         old_token_id: i64,
     ) -> Result<i64> {
         let mut tx = start_db_transaction(rm).await?;
 
-        Self::revoke(old_token_id, &mut *tx).await?;
-        let new_token_id = create::<Self, _, _>(dto, &mut *tx).await?;
+        Self::revoke_token(old_token_id, &mut *tx).await?;
+        let new_token_id = create::<TokenTable, _, _>(dto, &mut *tx).await?;
 
         commit_db_transaction(tx).await?;
 
         Ok(new_token_id)
     }
 
-    async fn revoke<'c, E>(id: i64, executor: E) -> Result<i64>
+    async fn revoke_token<'c, E>(id: i64, executor: E) -> Result<i64>
     where
         E: Executor<'c, Database = Postgres> + Send,
     {
@@ -144,7 +201,7 @@ impl TokenRepository {
             Ok(ret_id)
         } else {
             Err(RepositoryError::NotFound {
-                entity: Self::TABLE,
+                entity: "refresh_tokens",
                 id,
             })
         }
