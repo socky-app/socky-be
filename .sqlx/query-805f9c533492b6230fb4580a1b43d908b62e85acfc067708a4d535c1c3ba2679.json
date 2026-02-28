@@ -10,36 +10,41 @@
       },
       {
         "ordinal": 1,
-        "name": "user_id",
-        "type_info": "Int8"
-      },
-      {
-        "ordinal": 2,
-        "name": "family_id",
-        "type_info": "Uuid"
-      },
-      {
-        "ordinal": 3,
         "name": "token_hash",
         "type_info": "Bytea"
       },
       {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "family_id",
+        "type_info": "Uuid"
+      },
+      {
         "ordinal": 4,
+        "name": "access_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
         "name": "is_revoked",
         "type_info": "Bool"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "expires_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamp"
       }
@@ -50,6 +55,7 @@
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
