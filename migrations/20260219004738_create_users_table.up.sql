@@ -21,8 +21,8 @@ CREATE TABLE users (
 -- Partial Unique Indexes
 CREATE UNIQUE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
 
--- Index for finding deleted users or filtering them out quickly
-CREATE INDEX idx_users_deleted_at ON users(deleted_at);
+-- Only indexes the tiny percentage of users who are actually deleted
+CREATE INDEX idx_users_deleted_users ON users(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- Attach the auto-update trigger
 SELECT trigger_updated_at('users');

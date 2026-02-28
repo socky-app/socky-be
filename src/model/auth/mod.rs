@@ -20,9 +20,10 @@ pub struct LoginCredentialsEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RefreshTokenEntity {
     pub id: i64,
+    pub token_hash: Vec<u8>,
     pub user_id: i64,
     pub family_id: Uuid,
-    pub token_hash: Vec<u8>,
+    pub access_id: Uuid,
     pub is_revoked: bool,
     pub expires_at: NaiveDateTime,
     pub created_at: NaiveDateTime,

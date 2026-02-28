@@ -14,7 +14,7 @@ pub struct CurrentUser {
 impl From<AccessClaims> for CurrentUser {
     fn from(value: AccessClaims) -> Self {
         Self {
-            id: value.user_id(),
+            id: value.sub(),
             role: value.user_role(),
         }
     }

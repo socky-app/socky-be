@@ -119,9 +119,10 @@ impl AuthController {
 
         // 4. Store refresh token
         let create_dto = CreateRefreshTokenDto {
-            user_id: credentials.id,
-            family_id: tokens.family_id,
             token_hash: &refresh_token_hash,
+            user_id: tokens.user_id,
+            family_id: tokens.family_id,
+            access_id: tokens.access_token_id,
             expires_at: tokens.refresh_expires_at,
         };
         let _ = AuthRepository::create_token(rm, &create_dto).await?;
@@ -209,9 +210,10 @@ impl AuthController {
 
         // 7. Rotate tokens in single DB transaction
         let create_dto = CreateRefreshTokenDto {
-            user_id: token_entity.user_id,
-            family_id: token_entity.family_id,
             token_hash: &new_token_hash,
+            user_id: new_tokens.user_id,
+            family_id: new_tokens.family_id,
+            access_id: new_tokens.access_token_id,
             expires_at: new_tokens.refresh_expires_at,
         };
 
@@ -295,7 +297,7 @@ impl AuthController {
     /// Verify if the access token is valid.
     #[tracing::instrument(name = "auth_verify_token", skip_all)]
     pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<AccessClaims> {
-        let claims = token::validate_token::<AccessClaims>(
+        let claims = token::validate_jwt::<AccessClaims>(
             token,
             auth_config.access_token_secret.expose_secret(),
         )

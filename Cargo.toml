@@ -36,6 +36,8 @@ argon2 = "0.5.3"
 sha2 = "0.10.9"
 hmac = "0.12.1"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+rand = { "version" = "0.10.0", features = ["thread_rng"] }
+secrecy = { version = "0.10.3", features = ["serde"] }
 
 # Configuration
 dotenvy = "0.15.7"
@@ -45,8 +47,8 @@ figment = { version = "0.10.19", features = ["env"] }
 rpassword = "7.4.0"
 
 # Others
+base64 = "0.22.1"
 chrono = { version = "0.4.43", features = ["serde"] }
-secrecy = { version = "0.10.3", features = ["serde"] }
 strum_macros = "0.27.2"
 thiserror = "2.0.18"
 anyhow = "1.0.102"

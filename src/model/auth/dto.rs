@@ -33,8 +33,9 @@ pub struct UpdateUserPasswordDto {
 /// Token creation parameters.
 #[derive(Debug, Clone)]
 pub struct CreateRefreshTokenDto<'a> {
+    pub token_hash: &'a [u8],
     pub user_id: i64,
     pub family_id: Uuid,
-    pub token_hash: &'a [u8],
+    pub access_id: Uuid,
     pub expires_at: NaiveDateTime,
 }

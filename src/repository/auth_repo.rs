@@ -211,12 +211,14 @@ impl AuthRepository {
 impl Insertable for CreateRefreshTokenDto<'_> {
     fn push_insert<'r>(&'r self, query_builder: &mut sqlx::QueryBuilder<'r, sqlx::Postgres>) {
         query_builder
-            .push("(user_id, family_id, token_hash, expires_at) VALUES (")
+            .push("(token_hash, user_id, family_id, access_id, expires_at) VALUES (")
+            .push_bind(self.token_hash)
+            .push(", ")
             .push_bind(self.user_id)
             .push(", ")
             .push_bind(self.family_id)
             .push(", ")
-            .push_bind(self.token_hash)
+            .push_bind(self.access_id)
             .push(", ")
             .push_bind(self.expires_at)
             .push(")");
