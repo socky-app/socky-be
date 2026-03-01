@@ -26,6 +26,8 @@ use crate::{
     },
 };
 
+const DUMMY_PASSWORD_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$UFxiL8tpj0KYEN3aDEKaFg$nzKJ6p6BignX4wQJqfOjRtzga6iue7uJSGn//wHlW3g";
+
 #[derive(Debug, Error)]
 pub enum AuthError {
     #[error("hashing failed for {0}")]
@@ -93,21 +95,52 @@ impl AuthController {
         request: LoginRequestDto,
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
-        // 1. Verify login credentials
-        let credentials = AuthRepository::get_user_credentials_by_email(rm, &request.email)
-            .await?
-            .ok_or(AuthError::InvalidEmail {
-                email: request.email,
-            })?;
+        // 1. Fetch user credentials by email
+        let credentials_opt = AuthRepository::get_user_credentials_by_email(rm, &request.email).await?;
 
-        Self::verify_credentials(
-            &credentials,
-            &request.password,
-            &auth_config.password_pepper,
-        )
-        .await?;
+        // 2. Determine which hash to verify to normalize CPU time
+        let hash_to_verify = credentials_opt
+            .as_ref()
+            .map(|c| c.password_hash.clone())
+            .unwrap_or_else(|| DUMMY_PASSWORD_HASH.to_string());
 
-        // 2. Generate token pair
+        // 3. Always execute the blocking password verification
+        let is_password_valid = {
+            let pwd = request.password.clone();
+            let pepper = auth_config.password_pepper.clone();
+
+            tokio::task::spawn_blocking(move || {
+                PasswordUtils::verify_password(&pwd, &hash_to_verify, pepper.expose_secret())
+            })
+            .await
+            .map_err(|_e| {
+                ControllerError::Internal(
+                    "blocking thread for password verification failed to join".to_string(),
+                )
+            })?
+        };
+
+        // 4. Verify credentials
+        let credentials = match credentials_opt {
+            Some(c) => c,
+            None => {
+                // The email didn't exist, but we still performed the hashing to normalize the request duration.
+                return Err(AuthError::InvalidEmail { email: request.email }.into());
+            }
+        };
+
+        if !is_password_valid {
+            return Err(AuthError::InvalidPassword { user_id: credentials.id }.into());
+        }
+
+        credentials.status.check_status()?;
+
+        debug!(
+            user_id = %credentials.id,
+            "Credentials verification successful",
+        );
+
+        // 5. Generate token pair
         let tokens = token::generate_tokens(credentials.id, credentials.role, auth_config)
             .map_err(AuthError::from)?;
         let refresh_token_hash = hmac::hash_sha512(
@@ -116,10 +149,10 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        // 3. Get user info
+        // 6. Get user info
         let user_info = Self::get_login_info(rm, credentials.id).await?;
 
-        // 4. Store refresh token
+        // 7. Store refresh token
         let create_dto = CreateRefreshTokenDto {
             token_hash: &refresh_token_hash,
             user_id: tokens.user_id,
@@ -129,7 +162,7 @@ impl AuthController {
         };
         let _ = AuthRepository::create_token(rm, &create_dto).await?;
 
-        // 5. Update last login time (fire & forget)
+        // 8. Update last login time (fire & forget)
         {
             let rm_clone = rm.clone();
             tokio::spawn(async move {
@@ -143,7 +176,7 @@ impl AuthController {
             "Login successful",
         );
 
-        // 6. Return login VO
+        // 9. Return login VO
         Ok(AuthResponseVo {
             access_token: tokens.access_token,
             refresh_token: tokens.refresh_token,
@@ -297,6 +330,9 @@ impl AuthController {
     }
 
     /// Change user password.
+    /// 
+    /// We don't enforce the expensive password hash here like we do in login. This is a protected
+    /// endpoint, so the attack surface is N=1 and therefore there is no real benefit of doing so.
     #[tracing::instrument(name = "auth_update_password", skip_all)]
     pub async fn update_password(
         rm: &RepositoryManager,
@@ -307,15 +343,33 @@ impl AuthController {
         // 1. Fetch current user credentials
         let credentials = AuthRepository::get_user_credentials(rm, user_id).await?;
 
-        // 2. Verify old password (blocking thread)
-        Self::verify_credentials(
-            &credentials,
-            &request.old_password,
-            &auth_config.password_pepper,
-        )
-        .await?;
+        // 2. Check if user is active
+        credentials.status.check_status()?;
 
-        // 3. Hash the new password (blocking thread)
+        // 3. Verify old password (blocking thread)
+        let is_valid = {
+            let pwd = request.old_password.clone();
+            let pwd_hash = credentials.password_hash.clone();
+            let pepper = auth_config.password_pepper.clone();
+
+            tokio::task::spawn_blocking(move || {
+                PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
+            })
+            .await
+            .map_err(|_e| {
+                ControllerError::Internal(
+                    "blocking thread for password verification failed to join".to_string(),
+                )
+            })?
+        };
+
+        if !is_valid {
+            return Err(AuthError::InvalidPassword { user_id: credentials.id }.into());
+        }
+
+        debug!("Credentials verification successful");
+
+        // 4. Hash the new password (blocking thread)
         let new_hash = {
             let new_pwd = request.new_password.clone();
             let pepper = auth_config.password_pepper.clone();
@@ -328,7 +382,7 @@ impl AuthController {
             .map_err(AuthError::from)?
         };
 
-        // 4. Execute atomic database update
+        // 5. Execute atomic database update
         AuthRepository::change_password_and_revoke_tokens(rm, user_id, &new_hash).await?;
 
         tracing::info!("Password changed successfully and all previous sessions revoked");
@@ -359,45 +413,5 @@ impl AuthController {
             email: user.email,
             role: user.role,
         })
-    }
-
-    /// Verify user credentials.
-    async fn verify_credentials(
-        user: &UserCredentialsEntity,
-        password: &str,
-        pepper: &SecretString,
-    ) -> Result<()> {
-        // 1. Check if user is active
-        user.status.check_status()?;
-
-        // 2. Verify password
-        // Move to a spawn_blocking thread to release the executor threads from
-        // the expensive password hashing operation.
-        let is_valid = {
-            let pwd = password.to_string();
-            let pwd_hash = user.password_hash.clone();
-            let pepper = pepper.clone();
-
-            tokio::task::spawn_blocking(move || {
-                PasswordUtils::verify_password(&pwd, &pwd_hash, pepper.expose_secret())
-            })
-            .await
-            .map_err(|_e| {
-                ControllerError::Internal(
-                    "blocking thread for password verification failed to join".to_string(),
-                )
-            })?
-        };
-
-        if !is_valid {
-            return Err(AuthError::InvalidPassword { user_id: user.id }.into());
-        }
-
-        debug!(
-            user_id = %user.id,
-            "Credentials verification successful",
-        );
-
-        Ok(())
     }
 }
