@@ -184,8 +184,6 @@ impl AuthController {
         })
     }
 
-    // TODO: Create background task to periodically clean up dead tokens
-
     /// Refresh tokens.
     #[tracing::instrument(name = "auth_refresh", skip_all)]
     pub async fn refresh(
