@@ -36,7 +36,25 @@ impl DatabaseTable for TokenTable {
     type DeleteStrategy = HardDeleteStrategy;
 }
 
-/// User related implementation
+/// Token CRUD implementation
+impl AuthRepository {
+    pub async fn create_token<'a>(
+        rm: &RepositoryManager,
+        dto: &CreateRefreshTokenDto<'a>,
+    ) -> Result<i64> {
+        create::<TokenTable, _, _>(dto, rm.pool()).await
+    }
+
+    pub async fn get_token(rm: &RepositoryManager, id: i64) -> Result<RefreshTokenEntity> {
+        get::<TokenTable, _, _>(id, rm.pool()).await
+    }
+
+    pub async fn delete_token(rm: &RepositoryManager, id: i64) -> Result<()> {
+        delete::<TokenTable, _>(id, rm.pool()).await
+    }
+}
+
+/// Credentials and login implementation 
 impl AuthRepository {
     /// Gets user credentials for authentication (only essential fields)
     pub async fn get_user_credentials(
@@ -107,66 +125,10 @@ impl AuthRepository {
 
         Ok(())
     }
-
-    /// Change user password and revoke all refresh tokens.
-    pub async fn change_password_and_revoke_tokens(
-        rm: &RepositoryManager,
-        user_id: i64,
-        new_password_hash: &str,
-    ) -> Result<()> {
-        let mut tx = start_db_transaction(rm).await?;
-
-        sqlx::query!(
-            r#"UPDATE users SET password_hash = $1 WHERE id = $2"#,
-            new_password_hash,
-            user_id
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        Self::trans_revoke_tokens_for_user(user_id, &mut *tx).await?;
-
-        commit_db_transaction(tx).await?;
-
-        Ok(())
-    }
 }
 
-/// Token related implementation
+/// Logout implementation
 impl AuthRepository {
-    pub async fn create_token<'a>(
-        rm: &RepositoryManager,
-        dto: &CreateRefreshTokenDto<'a>,
-    ) -> Result<i64> {
-        create::<TokenTable, _, _>(dto, rm.pool()).await
-    }
-
-    pub async fn get_token(rm: &RepositoryManager, id: i64) -> Result<RefreshTokenEntity> {
-        get::<TokenTable, _, _>(id, rm.pool()).await
-    }
-
-    pub async fn delete_token(rm: &RepositoryManager, id: i64) -> Result<()> {
-        delete::<TokenTable, _>(id, rm.pool()).await
-    }
-
-    pub async fn get_token_by_hash(
-        rm: &RepositoryManager,
-        hash: &[u8],
-    ) -> Result<Option<RefreshTokenEntity>> {
-        let result = sqlx::query_as!(
-            RefreshTokenEntity,
-            r#"
-            SELECT * FROM refresh_tokens 
-            WHERE token_hash = $1
-            "#,
-            hash
-        )
-        .fetch_optional(rm.pool())
-        .await?;
-
-        Ok(result)
-    }
-
     /// Revokes the family of the token that has `token_hash`. Returns `Ok(Some)`` containing
     /// the token entity for that 'token_hash', so that the service can differentiate the use
     /// of previously revoked tokens for logout operations. If `token_hash` is not present,
@@ -210,6 +172,59 @@ impl AuthRepository {
         Ok(result)
     }
 
+    /// Revokes all tokens for a given user. If the query suceeds, returns `Ok`,
+    /// otherwise returns the corresponding `RepositoryError`.
+    pub async fn revoke_tokens_for_user(rm: &RepositoryManager, user_id: i64) -> Result<()> {
+        AuthRepository::trans_revoke_tokens_for_user(user_id, rm.pool()).await
+    }
+}
+
+/// Password changing implementation
+impl AuthRepository {
+    /// Change user password and revoke all refresh tokens.
+    pub async fn change_password_and_revoke_tokens(
+        rm: &RepositoryManager,
+        user_id: i64,
+        new_password_hash: &str,
+    ) -> Result<()> {
+        let mut tx = start_db_transaction(rm).await?;
+
+        sqlx::query!(
+            r#"UPDATE users SET password_hash = $1 WHERE id = $2"#,
+            new_password_hash,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        Self::trans_revoke_tokens_for_user(user_id, &mut *tx).await?;
+
+        commit_db_transaction(tx).await?;
+
+        Ok(())
+    }
+}
+
+/// Token rotation implementation
+impl AuthRepository {
+    pub async fn get_token_by_hash(
+        rm: &RepositoryManager,
+        hash: &[u8],
+    ) -> Result<Option<RefreshTokenEntity>> {
+        let result = sqlx::query_as!(
+            RefreshTokenEntity,
+            r#"
+            SELECT * FROM refresh_tokens 
+            WHERE token_hash = $1
+            "#,
+            hash
+        )
+        .fetch_optional(rm.pool())
+        .await?;
+
+        Ok(result)
+    }
+
     /// Revokes a complete token family. If the query suceeds, returns `Ok`,
     /// otherwise returns the corresponding `RepositoryError`.
     pub async fn revoke_token_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
@@ -225,12 +240,6 @@ impl AuthRepository {
         .await?;
 
         Ok(())
-    }
-
-    /// Revokes all tokens for a given user. If the query suceeds, returns `Ok`,
-    /// otherwise returns the corresponding `RepositoryError`.
-    pub async fn revoke_tokens_for_user(rm: &RepositoryManager, user_id: i64) -> Result<()> {
-        AuthRepository::trans_revoke_tokens_for_user(user_id, rm.pool()).await
     }
 
     /// Revokes the token from `old_token_id` and creates a new one using `dto`. Returns the id
@@ -255,7 +264,7 @@ impl AuthRepository {
     }
 }
 
-/// Implement helper methods for operations that require DB transactions.
+/// Helper methods for operations that require DB transactions.
 impl AuthRepository {
     async fn trans_revoke_token<'c, E>(id: i64, executor: E) -> Result<i64>
     where
