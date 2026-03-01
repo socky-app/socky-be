@@ -126,43 +126,48 @@ impl AuthRepository {
     /// the token entity for that 'token_hash', so that the service can differentiate the use
     /// of previously revoked tokens for logout operations. If `token_hash` is not present,
     /// returns `Ok(None)`, and if the query fails, returns the corresponding `RepositoryError`.
+    /// 
+    /// NOTE: This function only works because of the assumption that there should be strictly one
+    /// non-revoked token per family_id (last one that was issued during a rotation). If an
+    /// application-level bug breaks this invariant, this request could deadlock.
     pub async fn revoke_token_family_by_hash(
         rm: &RepositoryManager,
         token_hash: &[u8],
     ) -> Result<Option<RevokedTokenEntity>> {
-        let result = sqlx::query_as!(
+        let mut tx = start_db_transaction(rm).await?;
+
+        // Lock the specific token first
+        // If there is a concurrent refresh, this forces the logout to wait here.
+        let target_token = sqlx::query_as!(
             RevokedTokenEntity,
             r#"
-            WITH target_token AS (
-                SELECT
-                    id,
-                    user_id,
-                    family_id,
-                    is_revoked AS was_already_revoked
-                FROM refresh_tokens
-                WHERE token_hash = $1
-                LIMIT 1
-            ),
-            update_family AS (
-                UPDATE refresh_tokens
-                SET is_revoked = true
-                WHERE family_id = (SELECT family_id FROM target_token)
-                AND is_revoked = false 
-            )
-            -- Return the initial state captured in the first CTE
             SELECT
                 id,
                 user_id,
                 family_id,
-                was_already_revoked
-            FROM target_token;
+                is_revoked AS was_already_revoked
+            FROM refresh_tokens
+            WHERE token_hash = $1
+            FOR NO KEY UPDATE
             "#,
             token_hash
         )
-        .fetch_optional(rm.pool())
+        .fetch_optional(&mut *tx)
         .await?;
 
-        Ok(result)
+        if let Some(token) = target_token {
+            // Revoke the family in a separate statement
+            // Because this executes AFTER the lock is acquired, it gets a fresh 
+            // snapshot and will successfully catch any newly minted concurrent tokens.
+            Self::trans_revoke_tokens_for_family(&token.family_id, &mut *tx).await?;
+
+            commit_db_transaction(tx).await?;
+
+            Ok(Some(token))
+        } else {
+            // Token literally does not exist
+            Ok(None)
+        }
     }
 
     /// Revokes all tokens for a given user. If the query suceeds, returns `Ok`,
@@ -259,12 +264,7 @@ impl<'a> TokenRotationLock<'a> {
 
     /// Consumes the lock, revokes all the live tokens of the family, and commits.
     pub async fn revoke_family(mut self) -> Result<()> {
-        sqlx::query!(
-            "UPDATE refresh_tokens SET is_revoked = true WHERE family_id = $1 AND is_revoked = false",
-            self.entity.family_id
-        )
-        .execute(&mut *self.tx)
-        .await?;
+        AuthRepository::trans_revoke_tokens_for_family(&self.entity.family_id, &mut *self.tx).await?;
 
         commit_db_transaction(self.tx).await?;
 
@@ -274,6 +274,28 @@ impl<'a> TokenRotationLock<'a> {
 
 /// Helper methods for operations that require DB transactions.
 impl AuthRepository {
+    /// Revokes the entire token family. It only updates tokens that are currently not
+    /// revoked, to avoid any deadlocks.
+    async fn trans_revoke_tokens_for_family<'c, E>(family_id: &Uuid, executor: E) -> Result<()> 
+    where
+        E: Executor<'c, Database = Postgres> + Send,
+    {
+        sqlx::query!(
+            r#"
+            UPDATE refresh_tokens
+            SET is_revoked = true
+            WHERE family_id = $1 AND is_revoked = false
+            "#,
+            family_id
+        )
+        .execute(executor)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Revokes all the tokens for a user. It only updates tokens that are currently not
+    /// revoked, to avoid any deadlocks.
     async fn trans_revoke_tokens_for_user<'c, E>(user_id: i64, executor: E) -> Result<()>
     where
         E: Executor<'c, Database = Postgres> + Send,
