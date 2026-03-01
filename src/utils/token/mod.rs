@@ -87,7 +87,6 @@ pub fn generate_tokens_with_family_id(
 ) -> Result<TokenPair, TokenError> {
     // 1. Centralize time
     let now = Utc::now();
-    tracing::info!("Generate token now: {}", now);
     let access_duration = Duration::seconds(config.access_token_expiration_seconds);
     let refresh_duration = Duration::seconds(config.refresh_token_expiration_seconds);
 
