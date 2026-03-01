@@ -294,6 +294,17 @@ impl AuthController {
         Ok(())
     }
 
+    /// Logout user from all devices.
+    #[tracing::instrument(name = "auth_logout_all", skip_all)]
+    pub async fn logout_all(rm: &RepositoryManager, user_id: i64) -> Result<()> {
+        // Revoke all tokens associated with the user in a single DB query
+        AuthRepository::revoke_tokens_for_user(rm, user_id).await?;
+
+        tracing::info!("Successfully revoked all tokens for user");
+
+        Ok(())
+    }
+
     /// Verify if the access token is valid.
     #[tracing::instrument(name = "auth_verify_token", skip_all)]
     pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<AccessClaims> {

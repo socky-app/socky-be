@@ -38,7 +38,7 @@ impl DatabaseTable for TokenTable {
 
 /// User related implementation
 impl AuthRepository {
-    /// Get user by email for authentication (only essential fields)
+    /// Gets user by email for authentication (only essential fields)
     pub async fn get_login_credentials(
         rm: &RepositoryManager,
         email: &str,
@@ -63,7 +63,7 @@ impl AuthRepository {
         Ok(user)
     }
 
-    /// Update last login timestamp
+    /// Updates last login timestamp
     pub async fn update_last_login(rm: &RepositoryManager, id: i64) -> Result<()> {
         sqlx::query!(
             r#"UPDATE users SET last_login_at = $1 WHERE id = $2"#,
@@ -112,21 +112,10 @@ impl AuthRepository {
         Ok(result)
     }
 
-    pub async fn revoke_token_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE refresh_tokens 
-            SET is_revoked = true 
-            WHERE family_id = $1 AND is_revoked = false
-            "#,
-            family_id
-        )
-        .execute(rm.pool())
-        .await?;
-
-        Ok(())
-    }
-
+    /// Revokes the family of the token that has `token_hash`. Returns `Ok(Some)`` containing
+    /// the token entity for that 'token_hash', so that the service can differentiate the use
+    /// of previously revoked tokens for logout operations. If `token_hash` is not present,
+    /// returns `Ok(None)`, and if the query fails, returns the corresponding `RepositoryError`.
     pub async fn revoke_token_family_by_hash(
         rm: &RepositoryManager,
         token_hash: &[u8],
@@ -166,6 +155,35 @@ impl AuthRepository {
         Ok(result)
     }
 
+    /// Revokes a complete token family. If the query suceeds, returns `Ok`,
+    /// otherwise returns the corresponding `RepositoryError`.
+    pub async fn revoke_token_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE refresh_tokens 
+            SET is_revoked = true 
+            WHERE family_id = $1 AND is_revoked = false
+            "#,
+            family_id
+        )
+        .execute(rm.pool())
+        .await?;
+
+        Ok(())
+    }
+
+    /// Revokes all tokens for a given user. If the query suceeds, returns `Ok`,
+    /// otherwise returns the corresponding `RepositoryError`.
+    pub async fn revoke_tokens_for_user(rm: &RepositoryManager, user_id: i64) -> Result<()> {
+        AuthRepository::trans_revoke_tokens_for_user(user_id, rm.pool()).await
+    }
+
+    /// Revokes the token from `old_token_id` and creates a new one using `dto`. Returns the id
+    /// of the new refresh token inside `Ok`, or the corresponding `RepositoryError`.
+    ///
+    /// The operations are done atomically, so that if token creation fails, the user still has a
+    /// valid refresh token he can use to try again. Also, even though we know the old token should
+    /// be valid, if it was invalidated by a password change or logout mid-execution, this query will fail.
     pub async fn rotate_token(
         rm: &RepositoryManager,
         dto: &CreateRefreshTokenDto<'_>,
@@ -173,15 +191,18 @@ impl AuthRepository {
     ) -> Result<i64> {
         let mut tx = start_db_transaction(rm).await?;
 
-        Self::revoke_token(old_token_id, &mut *tx).await?;
+        Self::trans_revoke_token(old_token_id, &mut *tx).await?;
         let new_token_id = create::<TokenTable, _, _>(dto, &mut *tx).await?;
 
         commit_db_transaction(tx).await?;
 
         Ok(new_token_id)
     }
+}
 
-    async fn revoke_token<'c, E>(id: i64, executor: E) -> Result<i64>
+/// Implement helper methods for operations that require DB transactions.
+impl AuthRepository {
+    async fn trans_revoke_token<'c, E>(id: i64, executor: E) -> Result<i64>
     where
         E: Executor<'c, Database = Postgres> + Send,
     {
@@ -205,6 +226,24 @@ impl AuthRepository {
                 id,
             })
         }
+    }
+
+    async fn trans_revoke_tokens_for_user<'c, E>(user_id: i64, executor: E) -> Result<()>
+    where
+        E: Executor<'c, Database = Postgres> + Send,
+    {
+        sqlx::query!(
+            r#"
+            UPDATE refresh_tokens
+            SET is_revoked = true
+            WHERE user_id = $1 AND is_revoked = false
+            "#,
+            user_id
+        )
+        .execute(executor)
+        .await?;
+
+        Ok(())
     }
 }
 

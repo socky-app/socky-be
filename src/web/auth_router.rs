@@ -11,12 +11,12 @@ use crate::{
     app::AppState,
     config::AppConfig,
     context::CurrentUser,
+    controller::auth_controller::AuthController,
     model::auth::{
         dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto},
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },
     repository::RepositoryManager,
-    controller::auth_controller::AuthController,
     web::Result,
 };
 
@@ -31,6 +31,7 @@ pub fn public() -> Router<AppState> {
 /// Protected auth routes
 pub fn protected() -> Router<AppState> {
     Router::new()
+        .route("/logout-all", post(logout_all_handler))
         .route("/me", get(me_handler))
         .route("/health", get(health_handler))
 }
@@ -72,6 +73,16 @@ async fn logout_handler(
     Ok(AuthController::logout(&rm, &request.refresh_token, &app_config.auth).await?)
 }
 
+/// Logout user from all sessions.
+async fn logout_all_handler(
+    State(rm): State<RepositoryManager>,
+    current_user: CurrentUser,
+) -> Result<()> {
+    trace!("Handler auth logout");
+
+    Ok(AuthController::logout_all(&rm, current_user.id).await?)
+}
+
 /// Get user information.
 async fn me_handler(
     State(rm): State<RepositoryManager>,
@@ -85,9 +96,7 @@ async fn me_handler(
 }
 
 /// Check user authentication.
-async fn health_handler(
-    _current_user: CurrentUser,
-) -> Result<()> {
+async fn health_handler(_current_user: CurrentUser) -> Result<()> {
     trace!("Handler auth health");
     Ok(())
 }
