@@ -5,8 +5,8 @@ use uuid::Uuid;
 use crate::{
     model::{
         auth::{
-            dto::CreateRefreshTokenDto, LoginCredentialsEntity, RefreshTokenEntity,
-            RevokedTokenEntity,
+            dto::CreateRefreshTokenDto, RefreshTokenEntity, RevokedTokenEntity,
+            UserCredentialsEntity,
         },
         user::{UserRole, UserStatus},
     },
@@ -38,21 +38,53 @@ impl DatabaseTable for TokenTable {
 
 /// User related implementation
 impl AuthRepository {
-    /// Gets user by email for authentication (only essential fields)
-    pub async fn get_login_credentials(
+    /// Gets user credentials for authentication (only essential fields)
+    pub async fn get_user_credentials(
+        rm: &RepositoryManager,
+        id: i64,
+    ) -> Result<UserCredentialsEntity> {
+        let user_option = sqlx::query_as!(
+            UserCredentialsEntity,
+            r#"
+            SELECT
+                id,
+                password_hash,
+                role AS "role: UserRole",
+                status AS "status: UserStatus"
+            FROM users
+            WHERE id = $1
+            AND deleted_at IS NULL
+            "#,
+            id
+        )
+        .fetch_optional(rm.pool())
+        .await?;
+
+        if let Some(entity) = user_option {
+            Ok(entity)
+        } else {
+            Err(RepositoryError::NotFound {
+                entity: "users",
+                id,
+            })
+        }
+    }
+
+    /// Gets user credentials for authentication by email (only essential fields)
+    pub async fn get_user_credentials_by_email(
         rm: &RepositoryManager,
         email: &str,
-    ) -> Result<Option<LoginCredentialsEntity>> {
+    ) -> Result<Option<UserCredentialsEntity>> {
         let user = sqlx::query_as!(
-            LoginCredentialsEntity,
+            UserCredentialsEntity,
             r#"
-            SELECT 
-                id, 
-                password_hash, 
-                role AS "role: UserRole", 
+            SELECT
+                id,
+                password_hash,
+                role AS "role: UserRole",
                 status AS "status: UserStatus"
-            FROM users 
-            WHERE email = $1 
+            FROM users
+            WHERE email = $1
             AND deleted_at IS NULL
             "#,
             email
@@ -72,6 +104,29 @@ impl AuthRepository {
         )
         .execute(rm.pool())
         .await?;
+
+        Ok(())
+    }
+
+    /// Change user password and revoke all refresh tokens.
+    pub async fn change_password_and_revoke_tokens(
+        rm: &RepositoryManager,
+        user_id: i64,
+        new_password_hash: &str,
+    ) -> Result<()> {
+        let mut tx = start_db_transaction(rm).await?;
+
+        sqlx::query!(
+            r#"UPDATE users SET password_hash = $1 WHERE id = $2"#,
+            new_password_hash,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        Self::trans_revoke_tokens_for_user(user_id, &mut *tx).await?;
+
+        commit_db_transaction(tx).await?;
 
         Ok(())
     }

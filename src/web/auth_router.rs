@@ -13,7 +13,7 @@ use crate::{
     context::CurrentUser,
     controller::auth_controller::AuthController,
     model::auth::{
-        dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto},
+        dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto, UpdateUserPasswordDto},
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },
     repository::RepositoryManager,
@@ -32,6 +32,7 @@ pub fn public() -> Router<AppState> {
 pub fn protected() -> Router<AppState> {
     Router::new()
         .route("/logout-all", post(logout_all_handler))
+        .route("/password", post(update_password_handler))
         .route("/me", get(me_handler))
         .route("/health", get(health_handler))
 }
@@ -81,6 +82,18 @@ async fn logout_all_handler(
     trace!("Handler auth logout");
 
     Ok(AuthController::logout_all(&rm, current_user.id).await?)
+}
+
+/// Change password.
+async fn update_password_handler(
+    State(rm): State<RepositoryManager>,
+    State(app_config): State<Arc<AppConfig>>,
+    current_user: CurrentUser,
+    Json(request): Json<UpdateUserPasswordDto>,
+) -> Result<()> {
+    trace!("Handler update password");
+
+    Ok(AuthController::update_password(&rm, current_user.id, request, &app_config.auth).await?)
 }
 
 /// Get user information.

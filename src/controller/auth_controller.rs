@@ -9,9 +9,9 @@ use crate::{
     controller::{ControllerError, Result},
     model::{
         auth::{
-            dto::{CreateRefreshTokenDto, LoginRequestDto},
+            dto::{CreateRefreshTokenDto, LoginRequestDto, UpdateUserPasswordDto},
             vo::{AuthResponseVo, LoggedUserInfoVo},
-            LoginCredentialsEntity,
+            UserCredentialsEntity,
         },
         user::UserEntity,
     },
@@ -34,8 +34,8 @@ pub enum AuthError {
     #[error("invalid email {email}")]
     InvalidEmail { email: String },
 
-    #[error("invalid password for user {user_id} {email}")]
-    InvalidPassword { user_id: i64, email: String },
+    #[error("invalid password for user {user_id}")]
+    InvalidPassword { user_id: i64 },
 
     #[error("token not found")]
     NotFoundToken,
@@ -97,9 +97,14 @@ impl AuthController {
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         // 1. Verify login credentials
-        let credentials = Self::verify_login(
-            &rm.clone(),
-            &request.email,
+        let credentials = AuthRepository::get_user_credentials_by_email(rm, &request.email)
+            .await?
+            .ok_or(AuthError::InvalidEmail {
+                email: request.email,
+            })?;
+
+        Self::verify_credentials(
+            &credentials,
             &request.password,
             &auth_config.password_pepper,
         )
@@ -305,6 +310,46 @@ impl AuthController {
         Ok(())
     }
 
+    /// Change user password.
+    #[tracing::instrument(name = "auth_update_password", skip_all)]
+    pub async fn update_password(
+        rm: &RepositoryManager,
+        user_id: i64,
+        request: UpdateUserPasswordDto,
+        auth_config: &AuthConfig,
+    ) -> Result<()> {
+        // 1. Fetch current user credentials
+        let credentials = AuthRepository::get_user_credentials(rm, user_id).await?;
+
+        // 2. Verify old password (blocking thread)
+        Self::verify_credentials(
+            &credentials,
+            &request.old_password,
+            &auth_config.password_pepper,
+        )
+        .await?;
+
+        // 3. Hash the new password (blocking thread)
+        let new_hash = {
+            let new_pwd = request.new_password.clone();
+            let pepper = auth_config.password_pepper.clone();
+
+            tokio::task::spawn_blocking(move || {
+                PasswordUtils::hash_password(&new_pwd, pepper.expose_secret())
+            })
+            .await
+            .map_err(|_| ControllerError::Internal("blocking thread failed".into()))?
+            .map_err(AuthError::from)?
+        };
+
+        // 4. Execute atomic database update
+        AuthRepository::change_password_and_revoke_tokens(rm, user_id, &new_hash).await?;
+
+        tracing::info!("Password changed successfully and all previous sessions revoked");
+
+        Ok(())
+    }
+
     /// Verify if the access token is valid.
     #[tracing::instrument(name = "auth_verify_token", skip_all)]
     pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<AccessClaims> {
@@ -330,24 +375,16 @@ impl AuthController {
         })
     }
 
-    /// Verify login credentials.
-    async fn verify_login(
-        rm: &RepositoryManager,
-        email: &str,
+    /// Verify user credentials.
+    async fn verify_credentials(
+        user: &UserCredentialsEntity,
         password: &str,
         pepper: &SecretString,
-    ) -> Result<LoginCredentialsEntity> {
-        // 1. Get login credentials
-        let user = AuthRepository::get_login_credentials(rm, email)
-            .await?
-            .ok_or(AuthError::InvalidEmail {
-                email: email.to_string(),
-            })?;
-
-        // 2. Check if user is active
+    ) -> Result<()> {
+        // 1. Check if user is active
         user.status.check_status()?;
 
-        // 3. Verify password
+        // 2. Verify password
         // Move to a spawn_blocking thread to release the executor threads from
         // the expensive password hashing operation.
         let is_valid = {
@@ -367,18 +404,14 @@ impl AuthController {
         };
 
         if !is_valid {
-            return Err(AuthError::InvalidPassword {
-                user_id: user.id,
-                email: email.to_string(),
-            }
-            .into());
+            return Err(AuthError::InvalidPassword { user_id: user.id }.into());
         }
 
         debug!(
             user_id = %user.id,
-            "Login verification successful",
+            "Credentials verification successful",
         );
 
-        Ok(user)
+        Ok(())
     }
 }
