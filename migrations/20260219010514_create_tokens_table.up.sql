@@ -23,11 +23,20 @@ CREATE TABLE refresh_tokens (
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- Index for listing all tokens belonging to a specific user (for "Log out all devices")
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+-- Index for listing all tokens belonging to a specific user (for logging out of all devices)
+CREATE INDEX idx_refresh_tokens_user_id_active
+ON refresh_tokens(user_id)
+WHERE is_revoked = false;
 
--- Index for finding all tokens in a family (critical for rotation reuse detection)
-CREATE INDEX idx_refresh_tokens_family_id ON refresh_tokens(family_id);
+-- Index for finding all tokens in a family (for token rotation)
+CREATE INDEX idx_refresh_tokens_family_id_active
+ON refresh_tokens(family_id)
+WHERE is_revoked = false;
+
+-- Index for finding expired refresh tokens using BRIN
+CREATE INDEX idx_refresh_tokens_expires_at_brin 
+ON refresh_tokens USING BRIN (expires_at)
+WITH (autosummarize = on);
 
 -- Attach the auto-update trigger
 SELECT trigger_updated_at('refresh_tokens');
