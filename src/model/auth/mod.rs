@@ -37,3 +37,20 @@ pub struct RevokedTokenEntity {
     pub family_id: Uuid,
     pub was_already_revoked: bool,
 }
+
+/// Definition for token rotation.
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TokenRotationEntity {
+    pub id: i64,
+    pub token_hash: Vec<u8>,
+    pub user_id: i64,
+    pub family_id: Uuid,
+    pub access_id: Uuid,
+    pub is_revoked: bool,
+    pub expires_at: NaiveDateTime,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub user_email: String,
+    pub user_role: UserRole,
+    pub user_status: UserStatus,
+}

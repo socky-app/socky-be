@@ -5,21 +5,14 @@ use uuid::Uuid;
 use crate::{
     model::{
         auth::{
-            dto::CreateRefreshTokenDto, RefreshTokenEntity, RevokedTokenEntity,
-            UserCredentialsEntity,
+            RefreshTokenEntity, RevokedTokenEntity, TokenRotationEntity, UserCredentialsEntity, dto::CreateRefreshTokenDto
         },
         user::{UserRole, UserStatus},
     },
     repository::{
-        helper::{commit_db_transaction, start_db_transaction},
-        ops::{
-            create::{create, Create, Insertable},
-            delete::{delete, Delete},
-            delete_strategy::HardDeleteStrategy,
-            get::{get, Get},
-            DatabaseTable,
-        },
-        RepositoryError, RepositoryManager, Result,
+        RepositoryError, RepositoryManager, Result, helper::{commit_db_transaction, start_db_transaction}, ops::{
+            DatabaseTable, create::{Create, Insertable, create}, delete::{Delete, delete}, delete_strategy::HardDeleteStrategy, get::{Get, get}
+        }
     },
 };
 
@@ -54,7 +47,7 @@ impl AuthRepository {
     }
 }
 
-/// Credentials and login implementation 
+/// Credentials and login implementation
 impl AuthRepository {
     /// Gets user credentials for authentication (only essential fields)
     pub async fn get_user_credentials(
@@ -175,7 +168,7 @@ impl AuthRepository {
     /// Revokes all tokens for a given user. If the query suceeds, returns `Ok`,
     /// otherwise returns the corresponding `RepositoryError`.
     pub async fn revoke_tokens_for_user(rm: &RepositoryManager, user_id: i64) -> Result<()> {
-        AuthRepository::trans_revoke_tokens_for_user(user_id, rm.pool()).await
+        Self::trans_revoke_tokens_for_user(user_id, rm.pool()).await
     }
 }
 
@@ -205,93 +198,82 @@ impl AuthRepository {
     }
 }
 
+/// A guard that holds an exclusive database lock on a token family.
+/// If this struct is dropped before calling `rotate` or `revoke`,
+/// the database transaction is automatically rolled back.
+pub struct TokenRotationLock<'a> {
+    pub entity: TokenRotationEntity,
+    tx: sqlx::Transaction<'a, sqlx::Postgres>,
+}
+
 /// Token rotation implementation
 impl AuthRepository {
-    pub async fn get_token_by_hash(
-        rm: &RepositoryManager,
-        hash: &[u8],
-    ) -> Result<Option<RefreshTokenEntity>> {
-        let result = sqlx::query_as!(
-            RefreshTokenEntity,
-            r#"
-            SELECT * FROM refresh_tokens 
-            WHERE token_hash = $1
-            "#,
-            hash
-        )
-        .fetch_optional(rm.pool())
-        .await?;
-
-        Ok(result)
-    }
-
-    /// Revokes a complete token family. If the query suceeds, returns `Ok`,
-    /// otherwise returns the corresponding `RepositoryError`.
-    pub async fn revoke_token_family(rm: &RepositoryManager, family_id: &Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE refresh_tokens 
-            SET is_revoked = true 
-            WHERE family_id = $1 AND is_revoked = false
-            "#,
-            family_id
-        )
-        .execute(rm.pool())
-        .await?;
-
-        Ok(())
-    }
-
-    /// Revokes the token from `old_token_id` and creates a new one using `dto`. Returns the id
-    /// of the new refresh token inside `Ok`, or the corresponding `RepositoryError`.
-    ///
-    /// The operations are done atomically, so that if token creation fails, the user still has a
-    /// valid refresh token he can use to try again. Also, even though we know the old token should
-    /// be valid, if it was invalidated by a password change or logout mid-execution, this query will fail.
-    pub async fn rotate_token(
-        rm: &RepositoryManager,
-        dto: &CreateRefreshTokenDto<'_>,
-        old_token_id: i64,
-    ) -> Result<i64> {
+    /// Acquires a row-level lock on the token to prevent concurrent rotations.
+    pub async fn acquire_rotation_lock<'a>(
+        rm: &'a RepositoryManager,
+        token_hash: &[u8],
+    ) -> Result<Option<TokenRotationLock<'a>>> {
         let mut tx = start_db_transaction(rm).await?;
 
-        Self::trans_revoke_token(old_token_id, &mut *tx).await?;
-        let new_token_id = create::<TokenTable, _, _>(dto, &mut *tx).await?;
+        let entity_option = sqlx::query_as!(
+            TokenRotationEntity,
+            r#"
+            SELECT
+                t.*,
+                u.email AS user_email,
+                u.role AS "user_role: UserRole",
+                u.status AS "user_status: UserStatus"
+            FROM refresh_tokens t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.token_hash = $1
+            FOR NO KEY UPDATE OF t
+            "#,
+            token_hash
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
 
-        commit_db_transaction(tx).await?;
+        Ok(entity_option.map(|entity| TokenRotationLock { entity, tx }))
+    }
+}
 
-        Ok(new_token_id)
+impl<'a> TokenRotationLock<'a> {
+    /// Consumes the lock, revokes the old token, inserts the new one, and commits.
+    pub async fn rotate(mut self, dto: &CreateRefreshTokenDto<'_>) -> Result<i64> {
+        // 1. Revoke the specific old token
+        sqlx::query!(
+            "UPDATE refresh_tokens SET is_revoked = true WHERE id = $1",
+            self.entity.id
+        )
+        .execute(&mut *self.tx)
+        .await?;
+
+        // 2. Insert the new token
+        let new_id = create::<TokenTable, _, _>(dto, &mut *self.tx).await?;
+
+        // 3. Commit the transaction, releasing the lock
+        commit_db_transaction(self.tx).await?;
+
+        Ok(new_id)
+    }
+
+    /// Consumes the lock, revokes all the live tokens of the family, and commits.
+    pub async fn revoke_family(mut self) -> Result<()> {
+        sqlx::query!(
+            "UPDATE refresh_tokens SET is_revoked = true WHERE family_id = $1 AND is_revoked = false",
+            self.entity.family_id
+        )
+        .execute(&mut *self.tx)
+        .await?;
+
+        commit_db_transaction(self.tx).await?;
+
+        Ok(())
     }
 }
 
 /// Helper methods for operations that require DB transactions.
 impl AuthRepository {
-    async fn trans_revoke_token<'c, E>(id: i64, executor: E) -> Result<i64>
-    where
-        E: Executor<'c, Database = Postgres> + Send,
-    {
-        let ret_option = sqlx::query_scalar!(
-            r#"
-            UPDATE refresh_tokens
-            SET is_revoked = true
-            WHERE id = $1 AND is_revoked = false
-            RETURNING id
-            "#,
-            id
-        )
-        .fetch_optional(executor)
-        .await?;
-
-        if let Some(ret_id) = ret_option {
-            Ok(ret_id)
-        } else {
-            Err(RepositoryError::NotFound {
-                entity: "refresh_tokens",
-                id,
-            })
-        }
-    }
-
     async fn trans_revoke_tokens_for_user<'c, E>(user_id: i64, executor: E) -> Result<()>
     where
         E: Executor<'c, Database = Postgres> + Send,

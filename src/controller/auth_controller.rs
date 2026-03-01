@@ -170,38 +170,43 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        // 2. Fetch token record
+        // 2. Fetch token record and acquire lock
         // We need to know if it exists to check for reuse or expiration
-        let token_entity = AuthRepository::get_token_by_hash(rm, &input_token_hash)
+        let token_lock = AuthRepository::acquire_rotation_lock(rm, &input_token_hash)
             .await?
             .ok_or(AuthError::NotFoundToken)?;
+        let token_entity = &token_lock.entity;
 
-        // 3. Reuse Detection (Security Critical)
+        // 3. User status check (CRITICAL)
+        if let Err(e) = token_entity.user_status.check_status() {
+            // If the user was banned since their last refresh, kill the token.
+            token_lock.revoke_family().await?;
+            return Err(e.into());
+        }
+
+        // 4. Reuse detection (CRITICAL)
         if token_entity.is_revoked {
-            AuthRepository::revoke_token_family(rm, &token_entity.family_id).await?;
-
-            return Err(AuthError::RevokedToken {
+            let err = AuthError::RevokedToken {
                 token_id: token_entity.id,
                 user_id: token_entity.user_id,
                 family_id: token_entity.family_id,
-            }
-            .into());
+            };
+
+            token_lock.revoke_family().await?;
+
+            return Err(err.into());
         }
 
-        // 4. Check expiration
-        // We check against the DB record, not the JWT claim (Stateful check)
+        // 5. Expiration check (CRITICAL)
         if token_entity.expires_at < chrono::Utc::now().naive_utc() {
             return Err(AuthError::ExpiredToken.into());
         }
 
-        // 5. Get user info
-        let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
-
         // 6. Generate new refresh token pair
-        // CRITICAL: We pass the EXISTING family_id to maintain the chain
+        // We pass the existing family_id to maintain the chain
         let new_tokens = token::generate_tokens_with_family_id(
-            user_info.id,
-            user_info.role,
+            token_entity.user_id,
+            token_entity.user_role,
             token_entity.family_id,
             auth_config,
         )
@@ -213,7 +218,14 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        // 7. Rotate tokens in single DB transaction
+        // 7. Create user info
+        let user_info = LoggedUserInfoVo {
+            id: token_entity.user_id,
+            email: token_entity.user_email.clone(),
+            role: token_entity.user_role,
+        };
+
+        // 8. Rotate tokens
         let create_dto = CreateRefreshTokenDto {
             token_hash: &new_token_hash,
             user_id: new_tokens.user_id,
@@ -222,42 +234,19 @@ impl AuthController {
             expires_at: new_tokens.refresh_expires_at,
         };
 
-        let result = AuthRepository::rotate_token(rm, &create_dto, token_entity.id).await;
+        let result = token_lock.rotate(&create_dto).await?;
 
-        // 8. Handle happy path and rotation errors
-        match result {
-            Ok(_) => {
-                debug!(
-                    user_id = %user_info.id,
-                    user_role = user_info.role as i16,
-                    "Refresh successful",
-                );
+        debug!(
+            user_id = %user_info.id,
+            user_role = user_info.role as i16,
+            "Refresh successful",
+        );
 
-                Ok(AuthResponseVo {
-                    access_token: new_tokens.access_token,
-                    refresh_token: new_tokens.refresh_token,
-                    user_info,
-                })
-            }
-            Err(e) => {
-                // Check if the error is our specific NotFound error from the race condition
-                if let RepositoryError::NotFound { .. } = e {
-                    tracing::warn!(
-                        user_id = %token_entity.user_id,
-                        family_id = %token_entity.family_id,
-                        "Concurrent refresh detected. Rotation blocked."
-                    );
-
-                    // Return a custom auth error that translates to a 401 Unauthorized
-                    // so the client knows they need to log in again or use the token
-                    // from the other concurrent request.
-                    Err(AuthError::ConcurrentRefresh.into())
-                } else {
-                    // If it's a different database error (e.g., connection dropped), bubble it up
-                    Err(e.into())
-                }
-            }
-        }
+        Ok(AuthResponseVo {
+            access_token: new_tokens.access_token,
+            refresh_token: new_tokens.refresh_token,
+            user_info,
+        })
     }
 
     /// Logout user.
