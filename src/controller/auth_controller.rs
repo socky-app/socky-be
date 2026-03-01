@@ -55,9 +55,6 @@ pub enum AuthError {
 
     #[error("token creation failed")]
     TokenCreationFailed,
-
-    #[error("concurrent refreshes using same token")]
-    ConcurrentRefresh,
 }
 
 impl From<TokenError> for AuthError {
