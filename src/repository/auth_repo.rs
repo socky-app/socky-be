@@ -280,6 +280,23 @@ impl AuthRepository {
     /// Revokes the entire token family. It only updates tokens that are currently not
     /// revoked, to avoid any deadlocks.
     async fn trans_revoke_tokens_for_family<'c>(family_id: &Uuid, tx: &mut Transaction<'c, sqlx::Postgres>) -> Result<()> {
+        // Lock the currently active token(s) in the family.
+        // If an attacker is actively refreshing the valid token right now, 
+        // this forces our penalty thread to wait until they finish.
+        let _ = sqlx::query!(
+            r#"
+            SELECT id FROM refresh_tokens
+            WHERE family_id = $1 AND is_revoked = false
+            ORDER BY id
+            FOR NO KEY UPDATE
+            "#,
+            family_id
+        )
+        .fetch_all(&mut **tx)
+        .await?;
+
+        // Because this executes AFTER acquiring the lock, Postgres generates a 
+        // fresh snapshot.
         sqlx::query!(
             r#"
             UPDATE refresh_tokens
