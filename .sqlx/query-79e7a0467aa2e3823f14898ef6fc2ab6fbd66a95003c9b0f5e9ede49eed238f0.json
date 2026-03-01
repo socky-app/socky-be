@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                password_hash,\n                role AS \"role: UserRole\",\n                status AS \"status: UserStatus\"\n            FROM users\n            WHERE id = $1\n            AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "password_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "role: UserRole",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "status: UserStatus",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "79e7a0467aa2e3823f14898ef6fc2ab6fbd66a95003c9b0f5e9ede49eed238f0"
+}

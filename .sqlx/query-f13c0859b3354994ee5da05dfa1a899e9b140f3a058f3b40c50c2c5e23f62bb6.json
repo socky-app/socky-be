@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE refresh_tokens\n            SET is_revoked = true\n            WHERE id = $1 AND is_revoked = false\n            RETURNING id\n            ",
+  "query": "\n            SELECT id FROM refresh_tokens\n            WHERE user_id = $1 AND is_revoked = false\n            ORDER BY id\n            FOR NO KEY UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "8321e7f6bd3790befe8f9f01db8450d53e0236588612b8f939efb6f1166b9749"
+  "hash": "f13c0859b3354994ee5da05dfa1a899e9b140f3a058f3b40c50c2c5e23f62bb6"
 }
