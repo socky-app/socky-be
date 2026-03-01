@@ -6,6 +6,7 @@ pub mod config;
 pub mod model;
 pub mod repository;
 pub mod utils;
+pub mod worker;
 
 mod app;
 mod context;

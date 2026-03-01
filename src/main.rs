@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 use socky_be::{
     config::load_config,
     create_app,
-    repository::RepositoryManager,
+    repository::RepositoryManager, worker::spawn_token_cleanup_worker,
 };
 
 async fn run() -> Result<()> {
@@ -19,7 +19,10 @@ async fn run() -> Result<()> {
     let rm = RepositoryManager::new(&db_config).await?;
 
     // Create app
-    let app = create_app(rm, app_config);
+    let app = create_app(rm.clone(), app_config);
+
+    // Create helper workers
+    spawn_token_cleanup_worker(rm.clone());
 
     // Start server
     let listener = TcpListener::bind(&net_config.addr()).await?;

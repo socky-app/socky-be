@@ -348,6 +348,33 @@ impl AuthRepository {
     }
 }
 
+/// Token clean-up implementation
+impl AuthRepository {
+    /// Deletes expired tokens in batches of 1000.
+    /// Returns the number of rows deleted in this specific batch.
+    pub async fn delete_expired_token_batch(rm: &RepositoryManager, limit: u64) -> Result<u64> {
+        // We use a subquery to select a chunk, then delete that chunk.
+        // This prevents massive lock escalation.
+        let rows_affected = sqlx::query!(
+            r#"
+            DELETE FROM refresh_tokens
+            WHERE id IN (
+                SELECT id FROM refresh_tokens
+                WHERE expires_at < $1
+                LIMIT $2
+            )
+            "#,
+            chrono::Utc::now().naive_utc(),
+            limit as i64
+        )
+        .execute(rm.pool())
+        .await?
+        .rows_affected();
+
+        Ok(rows_affected)
+    }
+}
+
 impl Insertable for CreateRefreshTokenDto<'_> {
     fn push_insert<'r>(&'r self, query_builder: &mut sqlx::QueryBuilder<'r, sqlx::Postgres>) {
         query_builder
