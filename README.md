@@ -8,7 +8,11 @@ TODO: Add usage instructions with conventional setup, using docker and docker co
 
 ## Development
 
-> NOTE: Install cargo watch with `cargo install cargo-watch`.
+First of all, configure the githooks.
+
+```bash
+git config --local core.hooksPath .githooks
+```
 
 ### Starting the DB
 
@@ -43,6 +47,8 @@ cargo watch -q -c -w src/ -x "run"
 # Terminal 2 - To run the quick_dev.
 cargo watch -q -c -w examples/ -x "run --example quick_dev"
 ```
+
+> NOTE: Install cargo watch with `cargo install cargo-watch`.
 
 ### Unit Test
 
