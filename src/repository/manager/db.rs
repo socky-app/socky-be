@@ -1,9 +1,9 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tracing::{debug, info};
 use std::time::Duration;
+use tracing::{debug, info};
 
-use crate::config::DbConfig;
 use super::RepositoryManagerError;
+use crate::config::DbConfig;
 
 /// Creates a new database connection pool based on the provided configuration.
 ///
@@ -20,7 +20,7 @@ pub async fn create_pool(config: &DbConfig) -> Result<PgPool, RepositoryManagerE
         .connect(&config.url())
         .await
         .map_err(RepositoryManagerError::CreatePoolFailed)?;
-    
+
     info!("Database connection pool created successfully");
     Ok(pool)
 }

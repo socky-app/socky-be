@@ -3,7 +3,8 @@ use std::{any::Any, sync::Arc};
 use axum::{
     body::Body,
     extract::Request,
-    response::{IntoResponse, Response}, Router,
+    response::{IntoResponse, Response},
+    Router,
 };
 use std::time::Duration;
 use tower::ServiceBuilder;
@@ -14,10 +15,7 @@ use tower_http::{
 };
 use tracing::{debug, error, field, info, info_span, warn, Span};
 
-use crate::{
-    context::ErrorDetails,
-    web::WebError,
-};
+use crate::{context::ErrorDetails, web::WebError};
 
 /// Apply the global trace middleware to the router.
 pub fn apply_core_middleware(router: Router) -> Router {

@@ -6,9 +6,8 @@ use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 use socky_be::{
-    config::load_config,
-    create_app,
-    repository::RepositoryManager, worker::spawn_token_cleanup_worker,
+    config::load_config, create_app, repository::RepositoryManager,
+    worker::spawn_token_cleanup_worker,
 };
 
 async fn run() -> Result<()> {

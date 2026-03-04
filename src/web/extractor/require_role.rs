@@ -1,10 +1,6 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 
-use crate::{
-    context::CurrentUser,
-    model::user::error::UserRoleError,
-    web::WebError,
-};
+use crate::{context::CurrentUser, model::user::error::UserRoleError, web::WebError};
 
 /// A generic extractor that checks if the user's role meets the minimum required level.
 pub struct RequireRole<const MIN_ROLE: i16>(pub CurrentUser);

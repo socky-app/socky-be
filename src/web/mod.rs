@@ -2,11 +2,11 @@
 
 mod error;
 
-pub mod middleware;
-pub mod extractor;
 pub mod auth_router;
-pub mod health_router;
+pub mod extractor;
 pub mod fallback_router;
+pub mod health_router;
+pub mod middleware;
 
 pub mod transaction_router;
 

@@ -53,10 +53,18 @@ impl AccessClaims {
 
 impl Claims for AccessClaims {
     const TOKEN_TYPE: &str = "access";
-    fn jti(&self) -> Uuid { self.jti }
-    fn sub(&self) -> i64 { self.sub }
-    fn iat(&self) -> i64 { self.iat }
-    fn exp(&self) -> i64 { self.exp }
+    fn jti(&self) -> Uuid {
+        self.jti
+    }
+    fn sub(&self) -> i64 {
+        self.sub
+    }
+    fn iat(&self) -> i64 {
+        self.iat
+    }
+    fn exp(&self) -> i64 {
+        self.exp
+    }
 }
 
 #[derive(Debug)]

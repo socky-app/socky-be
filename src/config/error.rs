@@ -8,11 +8,8 @@ pub struct ConfigError {
 
 impl From<figment::Error> for ConfigError {
     fn from(value: figment::Error) -> Self {
-        let details = value
-                .into_iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>();
+        let details = value.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
 
-            ConfigError { details }
+        ConfigError { details }
     }
 }

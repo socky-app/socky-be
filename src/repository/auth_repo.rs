@@ -5,14 +5,21 @@ use uuid::Uuid;
 use crate::{
     model::{
         auth::{
-            RefreshTokenEntity, RevokedTokenEntity, TokenRotationEntity, UserCredentialsEntity, dto::CreateRefreshTokenDto
+            dto::CreateRefreshTokenDto, RefreshTokenEntity, RevokedTokenEntity,
+            TokenRotationEntity, UserCredentialsEntity,
         },
         user::{UserRole, UserStatus},
     },
     repository::{
-        RepositoryError, RepositoryManager, Result, helper::{commit_db_transaction, start_db_transaction}, ops::{
-            DatabaseTable, create::{Create, Insertable, create}, delete::{Delete, delete}, delete_strategy::HardDeleteStrategy, get::{Get, get}
-        }
+        helper::{commit_db_transaction, start_db_transaction},
+        ops::{
+            create::{create, Create, Insertable},
+            delete::{delete, Delete},
+            delete_strategy::HardDeleteStrategy,
+            get::{get, Get},
+            DatabaseTable,
+        },
+        RepositoryError, RepositoryManager, Result,
     },
 };
 
@@ -126,7 +133,7 @@ impl AuthRepository {
     /// the token entity for that 'token_hash', so that the service can differentiate the use
     /// of previously revoked tokens for logout operations. If `token_hash` is not present,
     /// returns `Ok(None)`, and if the query fails, returns the corresponding `RepositoryError`.
-    /// 
+    ///
     /// NOTE: This function only works because of the assumption that there should be strictly one
     /// non-revoked token per family_id (last one that was issued during a rotation). If an
     /// application-level bug breaks this invariant, this request could deadlock.
@@ -157,7 +164,7 @@ impl AuthRepository {
 
         if let Some(token) = target_token {
             // Revoke the family in a separate statement
-            // Because this executes AFTER the lock is acquired, it gets a fresh 
+            // Because this executes AFTER the lock is acquired, it gets a fresh
             // snapshot and will successfully catch any newly minted concurrent tokens.
             Self::trans_revoke_tokens_for_family(&token.family_id, &mut tx).await?;
 
@@ -267,7 +274,8 @@ impl<'a> TokenRotationLock<'a> {
 
     /// Consumes the lock, revokes all the live tokens of the family, and commits.
     pub async fn revoke_family(mut self) -> Result<()> {
-        AuthRepository::trans_revoke_tokens_for_family(&self.entity.family_id, &mut self.tx).await?;
+        AuthRepository::trans_revoke_tokens_for_family(&self.entity.family_id, &mut self.tx)
+            .await?;
 
         commit_db_transaction(self.tx).await?;
 
@@ -279,9 +287,12 @@ impl<'a> TokenRotationLock<'a> {
 impl AuthRepository {
     /// Revokes the entire token family. It only updates tokens that are currently not
     /// revoked, to avoid any deadlocks.
-    async fn trans_revoke_tokens_for_family<'c>(family_id: &Uuid, tx: &mut Transaction<'c, sqlx::Postgres>) -> Result<()> {
+    async fn trans_revoke_tokens_for_family<'c>(
+        family_id: &Uuid,
+        tx: &mut Transaction<'c, sqlx::Postgres>,
+    ) -> Result<()> {
         // Lock the currently active token(s) in the family.
-        // If an attacker is actively refreshing the valid token right now, 
+        // If an attacker is actively refreshing the valid token right now,
         // this forces our penalty thread to wait until they finish.
         let _ = sqlx::query!(
             r#"
@@ -295,7 +306,7 @@ impl AuthRepository {
         .fetch_all(&mut **tx)
         .await?;
 
-        // Because this executes AFTER acquiring the lock, Postgres generates a 
+        // Because this executes AFTER acquiring the lock, Postgres generates a
         // fresh snapshot.
         sqlx::query!(
             r#"
@@ -313,9 +324,12 @@ impl AuthRepository {
 
     /// Revokes all the tokens for a user. It only updates tokens that are currently not
     /// revoked, to avoid any deadlocks.
-    async fn trans_revoke_tokens_for_user<'c>(user_id: i64, tx: &mut Transaction<'c, sqlx::Postgres>) -> Result<()> {
+    async fn trans_revoke_tokens_for_user<'c>(
+        user_id: i64,
+        tx: &mut Transaction<'c, sqlx::Postgres>,
+    ) -> Result<()> {
         // Lock all active tokens for this user sequentially.
-        // If an attacker is currently refreshing any token, this forces the 
+        // If an attacker is currently refreshing any token, this forces the
         // revoke to wait here until they finish.
         let _ = sqlx::query!(
             r#"
@@ -330,8 +344,8 @@ impl AuthRepository {
         .await?;
 
         // The Actual Revocation
-        // Because this is a NEW statement executed AFTER acquiring the locks, 
-        // Postgres generates a fresh snapshot. If an attacker managed to insert 
+        // Because this is a NEW statement executed AFTER acquiring the locks,
+        // Postgres generates a fresh snapshot. If an attacker managed to insert
         // a new token while we were waiting at Step 1, this query will see it and destroy it.
         sqlx::query!(
             r#"

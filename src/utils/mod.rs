@@ -2,5 +2,5 @@
 // might be developed before they are actually needed.
 #![allow(unused)]
 pub mod hmac;
-pub mod token;
 pub mod password;
+pub mod token;

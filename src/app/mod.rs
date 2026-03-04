@@ -4,7 +4,8 @@ use crate::{
     config::AppConfig,
     repository::RepositoryManager,
     web::{
-        auth_router, fallback_router, health_router, middleware::{apply_core_middleware, auth_middleware}
+        auth_router, fallback_router, health_router,
+        middleware::{apply_core_middleware, auth_middleware},
     },
 };
 

@@ -47,10 +47,7 @@ impl TransactionRepository {
 
         Self::format_query(query, &mut query_builder);
 
-        let count: (i64,) = query_builder
-            .build_query_as()
-            .fetch_one(rm.pool())
-            .await?;
+        let count: (i64,) = query_builder.build_query_as().fetch_one(rm.pool()).await?;
 
         debug!("Transaction count: {:?}", count);
 
@@ -78,10 +75,7 @@ impl TransactionRepository {
         query_builder.push(" LIMIT ").push_bind(limit);
         query_builder.push(" OFFSET ").push_bind(offset);
 
-        let transactions = query_builder
-            .build_query_as()
-            .fetch_all(rm.pool())
-            .await?;
+        let transactions = query_builder.build_query_as().fetch_all(rm.pool()).await?;
 
         Ok((transactions, total))
     }

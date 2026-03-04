@@ -1,4 +1,6 @@
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::ErrorKind};
+use jsonwebtoken::{
+    decode, encode, errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;
@@ -23,7 +25,7 @@ pub fn generate_jwt<T: Claims>(claims: &T, secret: &str) -> Result<String, Token
     let header = Header::new(SELECTED_ALGO);
 
     let token = encode(&header, claims, &key).map_err(|_| TokenError::TokenCreationFailed)?;
-    
+
     debug!(
         sub = %claims.sub(),
         token_type = %T::TOKEN_TYPE,

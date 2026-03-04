@@ -97,7 +97,7 @@ mod tests {
     use super::*;
     use hex;
 
-    // Note: You may want to add `hex = "0.4"` to your dev-dependencies 
+    // Note: You may want to add `hex = "0.4"` to your dev-dependencies
     // to easily compare byte arrays with standard hex strings.
     // Use `cargo add --dev hex`
 
@@ -112,7 +112,10 @@ mod tests {
         let tag = hash_sha256(msg, key).expect("HMAC generation failed");
 
         // 2. Verify successfully
-        assert!(verify_sha256(msg, key, &tag), "Verification should pass with correct key/msg");
+        assert!(
+            verify_sha256(msg, key, &tag),
+            "Verification should pass with correct key/msg"
+        );
     }
 
     #[test]
@@ -125,7 +128,7 @@ mod tests {
         let expected_hex = "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7";
 
         let tag = hash_sha256(msg, &key).unwrap();
-        
+
         // Use hex crate if available, otherwise manual comparison
         assert_eq!(hex::encode(tag), expected_hex);
     }
@@ -137,15 +140,24 @@ mod tests {
         let tag = hash_sha256(msg, key).unwrap();
 
         // 1. Test Wrong Message
-        assert!(!verify_sha256(b"data modified", key, &tag), "Should fail on modified message");
+        assert!(
+            !verify_sha256(b"data modified", key, &tag),
+            "Should fail on modified message"
+        );
 
         // 2. Test Wrong Key
-        assert!(!verify_sha256(msg, b"wrong secret", &tag), "Should fail on wrong key");
+        assert!(
+            !verify_sha256(msg, b"wrong secret", &tag),
+            "Should fail on wrong key"
+        );
 
         // 3. Test Corrupted Tag
         let mut corrupted_tag = tag;
         corrupted_tag[0] ^= 0xFF; // Flip bits in the first byte
-        assert!(!verify_sha256(msg, key, &corrupted_tag), "Should fail on corrupted tag");
+        assert!(
+            !verify_sha256(msg, key, &corrupted_tag),
+            "Should fail on corrupted tag"
+        );
     }
 
     // --- SHA-512 Tests ---
@@ -154,11 +166,11 @@ mod tests {
     fn test_sha512_round_trip() {
         let key = b"another-secret";
         let msg = b"secure message";
-        
+
         let tag = hash_sha512(msg, key).expect("HMAC generation failed");
-        
+
         // Check output size is correct (64 bytes for SHA-512)
-        assert_eq!(tag.len(), 64); 
+        assert_eq!(tag.len(), 64);
         assert!(verify_sha512(msg, key, &tag));
     }
 
@@ -179,7 +191,7 @@ mod tests {
     fn test_empty_inputs() {
         let key = b"key";
         let empty_msg = b"";
-        
+
         // Empty message is valid
         let tag = hash_sha256(empty_msg, key).unwrap();
         assert!(verify_sha256(empty_msg, key, &tag));
@@ -192,11 +204,14 @@ mod tests {
 
     #[test]
     fn test_key_handling() {
-         // HMAC keys can be longer than the block size (they get hashed down)
-         let long_key = [0u8; 1024]; 
-         let msg = b"test";
-         
-         let result = hash_sha256(msg, &long_key);
-         assert!(result.is_ok(), "Should accept long keys (HMAC standard behavior)");
+        // HMAC keys can be longer than the block size (they get hashed down)
+        let long_key = [0u8; 1024];
+        let msg = b"test";
+
+        let result = hash_sha256(msg, &long_key);
+        assert!(
+            result.is_ok(),
+            "Should accept long keys (HMAC standard behavior)"
+        );
     }
 }

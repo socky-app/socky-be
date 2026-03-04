@@ -96,7 +96,8 @@ impl AuthController {
         auth_config: &AuthConfig,
     ) -> Result<AuthResponseVo> {
         // 1. Fetch user credentials by email
-        let credentials_opt = AuthRepository::get_user_credentials_by_email(rm, &request.email).await?;
+        let credentials_opt =
+            AuthRepository::get_user_credentials_by_email(rm, &request.email).await?;
 
         // 2. Determine which hash to verify to normalize CPU time
         let hash_to_verify = credentials_opt
@@ -125,12 +126,18 @@ impl AuthController {
             Some(c) => c,
             None => {
                 // The email didn't exist, but we still performed the hashing to normalize the request duration.
-                return Err(AuthError::InvalidEmail { email: request.email }.into());
+                return Err(AuthError::InvalidEmail {
+                    email: request.email,
+                }
+                .into());
             }
         };
 
         if !is_password_valid {
-            return Err(AuthError::InvalidPassword { user_id: credentials.id }.into());
+            return Err(AuthError::InvalidPassword {
+                user_id: credentials.id,
+            }
+            .into());
         }
 
         credentials.status.check_status()?;
@@ -328,7 +335,7 @@ impl AuthController {
     }
 
     /// Change user password.
-    /// 
+    ///
     /// We don't enforce the expensive password hash here like we do in login. This is a protected
     /// endpoint, so the attack surface is N=1 and therefore there is no real benefit of doing so.
     #[tracing::instrument(name = "auth_update_password", skip_all)]
@@ -362,7 +369,10 @@ impl AuthController {
         };
 
         if !is_valid {
-            return Err(AuthError::InvalidPassword { user_id: credentials.id }.into());
+            return Err(AuthError::InvalidPassword {
+                user_id: credentials.id,
+            }
+            .into());
         }
 
         debug!("Credentials verification successful");

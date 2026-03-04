@@ -1,7 +1,7 @@
 //! Controller layer
 
-mod error;
 pub mod auth_controller;
+mod error;
 
 // Re-export module error and result.
 pub use error::ControllerError;

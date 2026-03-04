@@ -2,8 +2,8 @@
 
 mod error;
 mod helper;
-mod ops;
 mod manager;
+mod ops;
 
 pub mod auth_repo;
 pub mod transaction_repo;

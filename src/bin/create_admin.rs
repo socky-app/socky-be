@@ -75,8 +75,7 @@ async fn main() -> Result<()> {
 
     info!(
         "✅ Successfully created admin user '{}' with ID: {}",
-        email,
-        admin_id
+        email, admin_id
     );
 
     Ok(())
