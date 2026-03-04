@@ -4,9 +4,6 @@ use uuid::Uuid;
 
 use crate::model::user::{UserRole, UserStatus};
 
-pub mod dto;
-pub mod vo;
-
 /// Minimal user info for auth.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserCredentialsEntity {

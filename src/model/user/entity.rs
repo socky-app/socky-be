@@ -3,10 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::user::error::UserStatusError;
 
-pub mod dto;
-pub mod error;
-pub mod vo;
-
 /// User definition.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserEntity {
