@@ -38,6 +38,10 @@ impl RepositoryManager {
         Ok(rm)
     }
 
+    pub fn from_pool(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
     pub async fn test_connection(&self) -> Result<(), RepositoryManagerError> {
         db::test_connection(&self.pool).await?;
 
