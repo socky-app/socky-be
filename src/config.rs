@@ -49,13 +49,13 @@ impl From<Config> for (NetworkConfig, AppConfig, DbConfig) {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppConfig {
     pub router: RouterConfig,
     pub auth: AuthConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NetworkConfig {
     pub port: u16,
     pub host: String,
@@ -67,12 +67,12 @@ impl NetworkConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct RouterConfig {
     pub web_folder: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct DbConfig {
     pub user: String,
     pub password: String,
@@ -93,7 +93,7 @@ impl DbConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AuthConfig {
     pub password_pepper: SecretString,
     pub access_token_secret: SecretString,
