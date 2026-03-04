@@ -2,9 +2,10 @@ use anyhow::Result;
 use reqwest::Client;
 use serde_json::json;
 
-mod common;
+#[path = "common/utils.rs"]
+mod utils;
 
-use common::{print_and_return_body, BASE_URL};
+use utils::{print_and_return_body, BASE_URL};
 
 #[tokio::main]
 async fn main() -> Result<()> {

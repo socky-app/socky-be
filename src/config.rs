@@ -2,6 +2,7 @@ use figment::providers::{Env, Serialized};
 use figment::Figment;
 use secrecy::SecretString;
 use serde::Deserialize;
+use thiserror::Error;
 
 const DEFAULT_NETWORK_PORT: u16 = 8000;
 const DEFAULT_NETWORK_HOST: &str = "0.0.0.0";
@@ -13,9 +14,19 @@ const DEFAULT_ACCESS_TOKEN_EXPIRATION_S: i64 = 60 * 15; // 15 min
 const DEFAULT_REFRESH_TOKEN_EXPIRATION_S: i64 = 60 * 60 * 24 * 15; // 15 days
 const DEFULAT_WEB_FOLDER: &str = "web-folder";
 
-mod error;
+#[derive(Debug, Error)]
+#[error("invalid configuration: {}", details.join("; "))]
+pub struct ConfigError {
+    pub details: Vec<String>,
+}
 
-pub use error::ConfigError;
+impl From<figment::Error> for ConfigError {
+    fn from(value: figment::Error) -> Self {
+        let details = value.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
+
+        ConfigError { details }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
