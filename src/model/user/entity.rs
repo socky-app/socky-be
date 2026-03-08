@@ -17,7 +17,9 @@ pub struct UserEntity {
 }
 
 /// User role enum for access control.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema,
+)]
 #[repr(i16)]
 pub enum UserRole {
     Standard = 1, // Standard operations allowed
@@ -26,7 +28,9 @@ pub enum UserRole {
 }
 
 /// User status enum for account control.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema,
+)]
 #[repr(i16)]
 pub enum UserStatus {
     Active = 1,   // Can perform all actions

@@ -16,14 +16,14 @@ pub struct TransactionEntity {
 }
 
 /// Transaction query parameters.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct TransactionQueryDto {
     pub cid: Option<i64>,
     pub title: Option<String>,
 }
 
 /// Transaction creation parameters.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct CreateTransactionDto {
     pub cid: i64, // TODO: Remove later and use logged user
     pub title: String,
@@ -31,14 +31,14 @@ pub struct CreateTransactionDto {
 }
 
 /// Transaction update parameters.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct UpdateTransactionDto {
     pub title: Option<String>,
     pub value: Option<Money>,
 }
 
 /// Transaction for list display.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct TransactionVo {
     pub id: i64,
     pub cid: i64,

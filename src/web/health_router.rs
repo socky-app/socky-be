@@ -8,7 +8,7 @@ use tracing::trace;
 use crate::{
     app::AppState,
     repository::{RepositoryManager, RepositoryManagerError},
-    web::Result,
+    web::{ClientError, Result},
 };
 
 // The check should pass only if the DB responds within this time
@@ -30,13 +30,32 @@ pub fn public() -> Router<AppState> {
         .route("/ready", get(ready_handler))
 }
 
-/// Check if service is alive.
+/// Check if service is live.
+#[utoipa::path(
+    get,
+    path = "/health/live",
+    tag = "Health",
+    summary = "Check service live",
+    responses(
+        (status = 200, description = "Service is live")
+    )
+)]
 async fn live_handler() -> Result<()> {
     trace!("Handler health live");
     Ok(())
 }
 
-/// Chec if service is live and dependencies are ready.
+/// Check if service is live and dependencies are ready.
+#[utoipa::path(
+    get,
+    path = "/health/ready",
+    tag = "Health",
+    summary = "Check service ready",
+    responses(
+        (status = 200, description = "Service is ready"),
+        (status = 503, description = "Service unavailable", body = ClientError)
+    )
+)]
 async fn ready_handler(State(rm): State<RepositoryManager>) -> Result<()> {
     trace!("Handler health ready");
 

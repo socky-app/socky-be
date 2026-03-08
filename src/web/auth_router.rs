@@ -17,7 +17,7 @@ use crate::{
         vo::{AuthResponseVo, LoggedUserInfoVo},
     },
     repository::RepositoryManager,
-    web::Result,
+    web::{ClientError, Result},
 };
 
 /// Public auth routes
@@ -38,6 +38,19 @@ pub fn protected() -> Router<AppState> {
 }
 
 /// Login with email and password.
+#[utoipa::path(
+    post,
+    path = "/api/auth/login",
+    tag = "Auth",
+    summary = "Login user",
+    request_body = LoginRequestDto,
+    responses(
+        (status = 200, description = "Login successful", body = AuthResponseVo),
+        (status = 401, description = "Unauthorized", body = ClientError),
+        (status = 403, description = "Forbidden", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    )
+)]
 async fn login_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
@@ -51,6 +64,19 @@ async fn login_handler(
 }
 
 /// Refresh credentials and rotate tokens.
+#[utoipa::path(
+    post,
+    path = "/api/auth/refresh",
+    tag = "Auth",
+    summary = "Refresh user credentials",
+    request_body = RefreshRequestDto,
+    responses(
+        (status = 200, description = "Refresh successful", body = AuthResponseVo),
+        (status = 401, description = "Unauthorized", body = ClientError),
+        (status = 403, description = "Forbidden", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    )
+)]
 async fn refresh_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
@@ -64,6 +90,17 @@ async fn refresh_handler(
 }
 
 /// Logout user.
+#[utoipa::path(
+    post,
+    path = "/api/auth/logout",
+    tag = "Auth",
+    summary = "Logout user",
+    request_body = LogoutRequestDto,
+    responses(
+        (status = 200, description = "Logout successful"),
+        (status = 500, description = "Internal server error", body = ClientError)
+    )
+)]
 async fn logout_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
@@ -75,6 +112,20 @@ async fn logout_handler(
 }
 
 /// Logout user from all sessions.
+#[utoipa::path(
+    post,
+    path = "/api/auth/logout-all",
+    tag = "Auth",
+    summary = "Logout user from all sessions",
+    responses(
+        (status = 200, description = "Logout all successful"),
+        (status = 401, description = "Unauthorized", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    ),
+    security(
+        ("bearer-jwt" = [])
+    )
+)]
 async fn logout_all_handler(
     State(rm): State<RepositoryManager>,
     current_user: CurrentUser,
@@ -85,6 +136,22 @@ async fn logout_all_handler(
 }
 
 /// Change password.
+#[utoipa::path(
+    post,
+    path = "/api/auth/password",
+    tag = "Auth",
+    summary = "Change password",
+    request_body = UpdateUserPasswordDto,
+    responses(
+        (status = 200, description = "Password updated successfully"),
+        (status = 401, description = "Unauthorized", body = ClientError),
+        (status = 403, description = "Forbidden", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    ),
+    security(
+        ("bearer-jwt" = [])
+    )
+)]
 async fn update_password_handler(
     State(rm): State<RepositoryManager>,
     State(app_config): State<Arc<AppConfig>>,
@@ -97,6 +164,20 @@ async fn update_password_handler(
 }
 
 /// Get user information.
+#[utoipa::path(
+    get,
+    path = "/api/auth/me",
+    tag = "Auth",
+    summary = "Get user information",
+    responses(
+        (status = 200, description = "User information retrieved", body = LoggedUserInfoVo),
+        (status = 401, description = "Unauthorized", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    ),
+    security(
+        ("bearer-jwt" = [])
+    )
+)]
 async fn me_handler(
     State(rm): State<RepositoryManager>,
     current_user: CurrentUser,
@@ -109,6 +190,19 @@ async fn me_handler(
 }
 
 /// Check user authentication.
+#[utoipa::path(
+    get,
+    path = "/api/auth/health",
+    tag = "Auth",
+    summary = "Check user authentication",
+    responses(
+        (status = 200, description = "Auth session is active"),
+        (status = 401, description = "Unauthorized", body = ClientError)
+    ),
+    security(
+        ("bearer-jwt" = [])
+    )
+)]
 async fn health_handler(_current_user: CurrentUser) -> Result<()> {
     trace!("Handler auth health");
     Ok(())

@@ -63,9 +63,9 @@ impl IntoResponse for WebError {
 }
 
 /// Public JSON error structure
-#[derive(Serialize)]
-struct ClientError {
-    message: String,
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct ClientError {
+    pub message: String,
 }
 
 /// Determine status code and user-facing message

@@ -43,6 +43,11 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env"] }
 
+# Documentation
+utoipa = { version = "5.3", features = ["axum_extras", "chrono", "decimal", "uuid"] }
+utoipauto = "0.3.0-alpha.2"
+utoipa-scalar = { version = "0.3", features = ["axum"] }
+
 # Helper scripts
 rpassword = "7.4.0"
 

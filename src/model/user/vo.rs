@@ -4,7 +4,7 @@ use serde::Serialize;
 use crate::model::user::{UserEntity, UserRole, UserStatus};
 
 /// User item for list display.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct UserVo {
     pub id: i64,
     pub email: String,

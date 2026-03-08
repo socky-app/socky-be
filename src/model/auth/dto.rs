@@ -3,7 +3,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 /// Request payload for user authentication.
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct LoginRequestDto {
     /// Email for authentication
     pub email: String,
@@ -11,20 +11,20 @@ pub struct LoginRequestDto {
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct RefreshRequestDto {
     /// Refresh token
     pub refresh_token: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct LogoutRequestDto {
     /// Refresh token
     pub refresh_token: String,
 }
 
 /// Update user password request parameters.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct UpdateUserPasswordDto {
     pub old_password: String,
     pub new_password: String,

@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::model::user::UserRole;
 
 /// Response payload for autheticated user.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct AuthResponseVo {
     /// Token for authenticating subsequent requests
     pub access_token: String,
@@ -14,7 +14,7 @@ pub struct AuthResponseVo {
 }
 
 /// Comprehensive user information for authenticated sessions.
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct LoggedUserInfoVo {
     /// Unique identifier of the user
     pub id: i64,

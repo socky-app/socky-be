@@ -4,7 +4,7 @@ use crate::{
     config::AppConfig,
     repository::RepositoryManager,
     web::{
-        auth_router, fallback_router, health_router,
+        auth_router, docs_router, fallback_router, health_router,
         middleware::{apply_core_middleware, auth_middleware},
     },
 };
@@ -31,6 +31,7 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
         .nest("/api", protected_api.merge(public_api))
         .nest("/health", health_router::public())
         .with_state(state.clone())
+        .nest("/docs", docs_router::public())
         .fallback(fallback_router::fallback);
 
     apply_core_middleware(router)
