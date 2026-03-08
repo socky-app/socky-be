@@ -64,3 +64,12 @@ Instead, if you prefer to execute only one test:
 # Specific test with filter.
 cargo watch -q -c -x "test utils::hmac::tests::test_sha256_round_trip -- --nocapture"
 ```
+
+## Nest steps
+
+- Auth
+  - Define sign-up token logic
+  - Create invite endpoint
+  - Create sign-up endpoint
+- User
+  - CRUD (behind admin only)
