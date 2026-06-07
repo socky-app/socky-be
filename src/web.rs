@@ -9,6 +9,7 @@ pub mod fallback_router;
 pub mod health_router;
 pub mod middleware;
 pub mod openapi;
+pub mod static_router;
 pub mod transaction_router;
 
 pub use error::WebError;
