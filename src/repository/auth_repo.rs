@@ -26,7 +26,7 @@ use crate::{
 /// Auth repository for database operations.
 pub struct AuthRepository;
 
-/// Token repository for database operations.
+/// Token table definition.
 struct TokenTable;
 
 impl DatabaseTable for TokenTable {
@@ -136,7 +136,10 @@ impl AuthRepository {
     ///
     /// NOTE: This function only works because of the assumption that there should be strictly one
     /// non-revoked token per family_id (last one that was issued during a rotation). If an
-    /// application-level bug breaks this invariant, this request could deadlock.
+    /// application-level bug breaks this invariant, this request could deadlock. To solve this,
+    /// we could read the target token without a lock first, then acquire locks on all non-revoked
+    /// tokens in the family, and then check if the target token is revoked or not. This would add
+    /// some complexity, but it would be more robust.
     pub async fn revoke_token_family_by_hash(
         rm: &RepositoryManager,
         token_hash: &[u8],
