@@ -1,6 +1,7 @@
-// Allow unused code on utils module, because the utilities
-// might be developed before they are actually needed.
-#![allow(unused)]
+//! Cryptography and security utility helpers.
+//!
+//! Provides submodules for password hashing, HMAC generation, and JWT token claims validation.
+
 pub mod hmac;
 pub mod password;
 pub mod token;

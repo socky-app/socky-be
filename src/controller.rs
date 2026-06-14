@@ -1,4 +1,7 @@
-//! Controller layer
+//! Controller layer.
+//!
+//! Orchestrates the business logic of the application by coordinating database
+//! models, repositories, and helper utilities.
 
 pub mod auth_controller;
 mod error;

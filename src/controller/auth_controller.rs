@@ -1,3 +1,8 @@
+//! Authentication and session management controller.
+//!
+//! Handles business logic for logging in, refreshing sessions via token rotation,
+//! logging out, and updating user passwords. Includes defensive hashing to prevent timing attacks.
+
 use secrecy::{ExposeSecret, SecretString};
 
 use thiserror::Error;
@@ -85,10 +90,15 @@ impl From<hmac::InvalidLength> for AuthError {
     }
 }
 
+/// Controller orchestrating all authentication workflows.
 pub struct AuthController;
 
 impl AuthController {
-    // Login user.
+    /// Authenticates a user using their email and password.
+    ///
+    /// Performs constant-time password verification using a dummy hash if the email is not found,
+    /// preventing username enumeration via timing analysis. Generates a fresh JWT access token
+    /// and an opaque refresh token stored in the database.
     #[tracing::instrument(name = "auth_login", skip_all, fields(email = %request.email))]
     pub async fn login(
         rm: &RepositoryManager,

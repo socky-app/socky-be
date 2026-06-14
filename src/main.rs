@@ -1,4 +1,8 @@
-//! Entrypoint for the the Socky backend.
+//! # Socky Backend Server Entrypoint
+//!
+//! This binary initializes the configuration, connects to the database pool,
+//! configures telemetry/logging, spawns background workers, and binds the TCP listener
+//! to serve the Axum application.
 
 use anyhow::Result;
 use tokio::net::TcpListener;

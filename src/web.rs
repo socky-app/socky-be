@@ -1,4 +1,7 @@
 //! Web layer.
+//!
+//! Manages API endpoint routing, request extraction, custom middleware pipelines,
+//! and HTTP error serialization (mapping internal errors to client-safe response payloads).
 
 mod error;
 

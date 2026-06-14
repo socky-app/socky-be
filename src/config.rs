@@ -1,3 +1,8 @@
+//! Configuration management module.
+//!
+//! Loads configurations for database connectivity, network bindings, and authentication secrets
+//! using the Figment library. Re-maps configurations to specialized subsets for easier injection.
+
 use figment::providers::{Env, Serialized};
 use figment::Figment;
 use secrecy::SecretString;
@@ -14,9 +19,11 @@ const DEFAULT_ACCESS_TOKEN_EXPIRATION_S: i64 = 60 * 15; // 15 min
 const DEFAULT_REFRESH_TOKEN_EXPIRATION_S: i64 = 60 * 60 * 24 * 15; // 15 days
 const DEFULAT_WEB_FOLDER: &str = "web-folder";
 
+/// Configuration parsing error.
 #[derive(Debug, Error)]
 #[error("invalid configuration: {}", details.join("; "))]
 pub struct ConfigError {
+    /// List of configuration error details.
     pub details: Vec<String>,
 }
 
@@ -28,11 +35,16 @@ impl From<figment::Error> for ConfigError {
     }
 }
 
+/// The top-level combined application configuration.
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    /// Network listener details (host/port).
     pub network: NetworkConfig,
+    /// Static assets router details.
     pub router: RouterConfig,
+    /// Database pool configurations.
     pub db: DbConfig,
+    /// Cryptographic parameters for authentication.
     pub auth: AuthConfig,
 }
 

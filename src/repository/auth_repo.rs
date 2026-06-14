@@ -1,3 +1,8 @@
+//! Database repository for authentication, user sessions, and token rotation security.
+//!
+//! Provides SQL queries for refresh token tracking, family revocation, credentials loading,
+//! and last login timestamps.
+
 use chrono::Utc;
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;

@@ -3,45 +3,63 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::user::error::UserStatusError;
 
-/// User definition.
+/// Database entity representing a User registered in the system.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserEntity {
+    /// Unique identifier for the user (automatically incremented).
     pub id: i64,
+    /// User's email address (normalized, unique).
     pub email: String,
+    /// Secure Argon2 peppered password hash.
     pub password_hash: String,
+    // pub username: String,
+    // pub full_name: String,
+    /// Role for access control / RBAC.
     pub role: UserRole,
+    /// Account lifecycle status.
     pub status: UserStatus,
+    /// Timestamp of the last successful login.
     pub last_login_at: Option<NaiveDateTime>,
+    /// Creation timestamp.
     pub created_at: NaiveDateTime,
+    /// Auto-updating timestamp for modifications.
     pub updated_at: NaiveDateTime,
 }
 
-/// User role enum for access control.
+/// User role enum for access control (RBAC).
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema,
 )]
 #[repr(i16)]
 pub enum UserRole {
-    Standard = 1, // Standard operations allowed
-    Support = 2,  // Diagnostic and support operations
-    Admin = 3,    // All operations
+    /// Standard operations allowed (default).
+    Standard = 1,
+    /// Support and diagnostic operations.
+    Support = 2,
+    /// Administrative operations (full system access).
+    Admin = 3,
 }
 
-/// User status enum for account control.
+/// User status enum for account lifecycle control.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema,
 )]
 #[repr(i16)]
 pub enum UserStatus {
-    Active = 1,   // Can perform all actions
-    Disabled = 2, // Can re-activate by itself
-    Pending = 3,  // Needs external action for re-activation
-    Locked = 4,   // Only support can re-activate
+    /// Fully active user (normal execution permitted).
+    Active = 1,
+    /// Disabled user (self-deactivated, has limited login/re-enable access).
+    Disabled = 2,
+    /// Pending user (newly created, waiting verification).
+    Pending = 3,
+    /// Locked user (security block, support intervention needed).
+    Locked = 4,
+    // Deleted = 5, // Soft deleted, cannot be re-activated
 }
 
 impl UserStatus {
-    /// Checks if the user status allows login.
-    /// Returns Ok(()) if allowed, or an appropriate UserError otherwise.
+    /// Checks if the user status allows logging in.
+    /// Returns Ok(()) if active, or returns a specialized UserStatusError on restriction.
     pub fn check_status(&self) -> Result<(), UserStatusError> {
         match self {
             UserStatus::Active => Ok(()),

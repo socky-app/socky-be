@@ -1,3 +1,8 @@
+//! Application bootstrap and router configuration.
+//!
+//! Re-exports the AppState and provides `create_app` to wire up protected
+//! routes, public routes, middleware pipelines, fallback routers, and static assets.
+
 use axum::{middleware, Router};
 use tower_http::services::ServeDir;
 
@@ -15,6 +20,10 @@ mod state;
 
 pub use state::AppState;
 
+/// Instantiates and configures the core Axum `Router` for the application.
+///
+/// Combines public routes, middleware-protected routes, static files, openapi documentation,
+/// and applies core tracking, tracing, and middleware pipelines.
 pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
     let assets_service = static_router::static_assets(&app_config.router.web_folder);
 

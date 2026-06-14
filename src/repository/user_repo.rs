@@ -1,3 +1,5 @@
+//! User database repository implementation.
+
 use chrono::Utc;
 use sqlx::QueryBuilder;
 
@@ -15,7 +17,10 @@ use crate::{
     },
 };
 
-/// User repository for database operations.
+/// Repository handling database operations on the `users` table.
+///
+/// Implements repository operation traits (`Create`, `Get`, `Update`, `Delete`, `SoftDelete`)
+/// to coordinate database access using SQLx.
 pub struct UserRepository;
 
 impl DatabaseTable for UserRepository {
@@ -39,9 +44,10 @@ impl delete::Delete for UserRepository {}
 
 impl soft_delete::SoftDelete for UserRepository {}
 
-/// Implement check existence by columns.
 impl UserRepository {
-    /// Check if email exists
+    /// Checks if a user record with the given `email` exists in the database.
+    ///
+    /// Only queries active (non-soft-deleted) user accounts.
     pub async fn email_exists(rm: &RepositoryManager, email: &str) -> Result<bool> {
         Self::exists_by_column(rm, "email", email).await
     }

@@ -1,6 +1,6 @@
 //! Extractor types to handle role access.
 //!
-//! Use axum::middleware::from_extractor::<T>() to create middlewares when multiple routes
+//! Use `axum::middleware::from_extractor::<T>()` to create middlewares when multiple routes
 //! have the same permissions, or use the extractor directly on the route if more
 //! granular access is required.
 
