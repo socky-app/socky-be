@@ -60,7 +60,7 @@ graph TD
 ### Phase 2: Core Expense & Income Tables
 
 - **Goal**: Implement personal transaction tracking (Debit vs. Credit Card cycles with installment dates) and Income tracking (without splits).
-- **Details**: See `docs/plans/phase_2_core_finance.md` (to be created).
+- **Details**: See [docs/plans/phase_2_core_finance.md](file:///home/schneider/Documents/socky-be/docs/plans/phase_2_core_finance.md).
 
 ### Phase 3: Group Splitting & Debt Tracking
 
