@@ -75,17 +75,9 @@ Instead, if you prefer to execute only one test:
 cargo watch -q -c -x "test utils::hmac::tests::test_sha256_round_trip -- --nocapture"
 ```
 
-## Next Tasks
+## Implementation Roadmap
 
-- User
-  - CRUD (behind admin only, maybe get for support too)
-  - Ghost user strategy for splitting with non registered users
-  - User merging
-- Auth
-  - Define sign-up token logic
-  - Create invite endpoint
-  - Create sign-up endpoint
-- Expense Tracking
-- Income Tracking
-- Budget
-- Investments
+For the implementation plans, feature requirements, and technical phases, please refer to:
+
+- [Implementation Roadmap](file:///home/schneider/Documents/socky-be/docs/plans/roadmap.md)
+- [User State Machine Specifications](file:///home/schneider/Documents/socky-be/docs/reference/user_state_machine.md)
