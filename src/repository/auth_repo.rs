@@ -71,12 +71,12 @@ impl AuthRepository {
             r#"
             SELECT
                 id,
-                password_hash,
-                role AS "role: UserRole",
-                status AS "status: UserStatus"
+                password_hash AS "password_hash!",
+                role AS "role!: UserRole",
+                status AS "status!: UserStatus"
             FROM users
             WHERE id = $1
-            AND deleted_at IS NULL
+            AND is_ghost = false
             "#,
             id
         )
@@ -103,12 +103,12 @@ impl AuthRepository {
             r#"
             SELECT
                 id,
-                password_hash,
-                role AS "role: UserRole",
-                status AS "status: UserStatus"
+                password_hash as "password_hash!",
+                role AS "role!: UserRole",
+                status AS "status!: UserStatus"
             FROM users
             WHERE email = $1
-            AND deleted_at IS NULL
+            AND is_ghost = false
             "#,
             email
         )
@@ -243,9 +243,9 @@ impl AuthRepository {
             r#"
             SELECT
                 t.*,
-                u.email AS user_email,
-                u.role AS "user_role: UserRole",
-                u.status AS "user_status: UserStatus"
+                u.email AS "user_email!",
+                u.role AS "user_role!: UserRole",
+                u.status AS "user_status!: UserStatus"
             FROM refresh_tokens t
             JOIN users u ON t.user_id = u.id
             WHERE t.token_hash = $1
@@ -394,6 +394,42 @@ impl AuthRepository {
         .rows_affected();
 
         Ok(rows_affected)
+    }
+}
+
+/// Delete and anonymize methods
+impl AuthRepository {
+    /// Anonymizes a user account (converts to ghost) and permanently deletes all their sessions.
+    pub async fn anonymize_user(rm: &RepositoryManager, user_id: i64) -> Result<()> {
+        let mut tx = start_db_transaction(rm).await?;
+
+        // 1. Delete all refresh tokens
+        sqlx::query!("DELETE FROM refresh_tokens WHERE user_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::DatabaseQueryFailed)?;
+
+        // 2. Anonymize user record
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET email = NULL,
+                password_hash = NULL,
+                username = NULL,
+                is_ghost = true,
+                role = NULL,
+                status = NULL,
+                updated_at = now()
+            WHERE id = $1
+            "#,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::DatabaseQueryFailed)?;
+
+        commit_db_transaction(tx).await?;
+        Ok(())
     }
 }
 

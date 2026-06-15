@@ -11,6 +11,19 @@ pub struct LoginRequestDto {
     pub password: String,
 }
 
+/// Request payload for user registration.
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct SignupRequestDto {
+    /// Email for authentication.
+    pub email: String,
+    /// User's password in plain text.
+    pub password: String,
+    /// Unique username handle.
+    pub username: String,
+    /// Display name.
+    pub full_name: String,
+}
+
 /// Request payload to refresh expired credentials.
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct RefreshRequestDto {

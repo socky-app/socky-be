@@ -5,8 +5,8 @@ use rpassword::read_password;
 use secrecy::ExposeSecret;
 use socky_be::{
     config::{load_config, Config},
-    model::user::{dto::CreateUserDto, UserRole, UserStatus},
-    repository::{user_repo::UserRepository, Create, RepositoryManager},
+    model::user::{dto::CreateRegisteredUserDto, UserRole, UserStatus},
+    repository::{user_repo::UserRepository, RepositoryManager},
     utils::password::PasswordUtils,
 };
 use tracing::info;
@@ -63,13 +63,15 @@ async fn main() -> Result<()> {
 
     // Insert user into respository
     info!("Inserting admin user into the database");
-    let dto = CreateUserDto {
+    let dto = CreateRegisteredUserDto {
         email: email.to_string(),
-        password: password_hash,
+        username: email.split('@').next().unwrap_or("admin").to_string(),
+        full_name: "Admin User".to_string(),
+        password_hash,
         role: UserRole::Admin,
         status: UserStatus::Active,
     };
-    let admin_id = UserRepository::create(&rm, &dto)
+    let admin_id = UserRepository::create_registered_user(&rm, &dto)
         .await
         .context("Failed to insert the new admin user")?;
 

@@ -6,4 +6,6 @@ pub enum RepositoryError {
     DatabaseQueryFailed(#[from] sqlx::Error),
     #[error("could not find {entity} with id {id}")]
     NotFound { entity: &'static str, id: i64 },
+    #[error("database consistency violation: {0}")]
+    ConsistencyViolation(String),
 }

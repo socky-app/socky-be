@@ -1,5 +1,5 @@
 use crate::{
-    model::user::UserRole,
+    model::user::{UserRole, UserStatus},
     utils::token::{AccessClaims, Claims},
 };
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct CurrentUser {
     pub id: i64,
     pub role: UserRole,
+    pub status: UserStatus,
 }
 
 impl From<AccessClaims> for CurrentUser {
@@ -16,6 +17,7 @@ impl From<AccessClaims> for CurrentUser {
         Self {
             id: value.sub(),
             role: value.user_role(),
+            status: value.user_status(),
         }
     }
 }

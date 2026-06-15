@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                password_hash AS \"password_hash!\",\n                role AS \"role!: UserRole\",\n                status AS \"status!: UserStatus\"\n            FROM users\n            WHERE id = $1\n            AND is_ghost = false\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "password_hash!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "role!: UserRole",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "status!: UserStatus",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "cde9b3787508e7526bef8379f671115f6c7581e8fcbb58f987f569309a2799a1"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET status = $1, updated_at = now() WHERE id = $2 AND is_ghost = false",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2b84e4d49c8f7514b1bdffd4b4537a2598f1d5095d067824533f1d4e426d8729"
+}

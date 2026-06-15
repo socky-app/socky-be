@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n            SET email = NULL,\n                password_hash = NULL,\n                username = NULL,\n                is_ghost = true,\n                role = NULL,\n                status = NULL,\n                updated_at = now()\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d004f5d6afad0ce73aa24033c5cfee10b1463d52367073e75e0acfe36b7fef9"
+}

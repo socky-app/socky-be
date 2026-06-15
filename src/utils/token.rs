@@ -9,7 +9,10 @@ use thiserror::Error;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::{config::AuthConfig, model::user::UserRole};
+use crate::{
+    config::AuthConfig,
+    model::user::{UserRole, UserStatus},
+};
 
 mod jwt;
 
@@ -31,16 +34,24 @@ pub struct AccessClaims {
     jti: Uuid,
     sub: i64,
     role: UserRole,
+    status: UserStatus,
     exp: i64,
     iat: i64,
 }
 
 impl AccessClaims {
-    pub fn new(user_id: i64, user_role: UserRole, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+    pub fn new(
+        user_id: i64,
+        user_role: UserRole,
+        user_status: UserStatus,
+        iat: DateTime<Utc>,
+        exp: DateTime<Utc>,
+    ) -> Self {
         AccessClaims {
             jti: Uuid::new_v4(),
             sub: user_id,
             role: user_role,
+            status: user_status,
             iat: iat.timestamp(),
             exp: exp.timestamp(),
         }
@@ -48,6 +59,10 @@ impl AccessClaims {
 
     pub fn user_role(&self) -> UserRole {
         self.role
+    }
+
+    pub fn user_status(&self) -> UserStatus {
+        self.status
     }
 }
 
@@ -81,15 +96,17 @@ pub struct TokenPair {
 pub fn generate_tokens(
     user_id: i64,
     user_role: UserRole,
+    user_status: UserStatus,
     config: &AuthConfig,
 ) -> Result<TokenPair, TokenError> {
-    generate_tokens_with_family_id(user_id, user_role, Uuid::new_v4(), config)
+    generate_tokens_with_family_id(user_id, user_role, user_status, Uuid::new_v4(), config)
 }
 
 /// Generate a pair of access and refresh tokens for a given family ID.
 pub fn generate_tokens_with_family_id(
     user_id: i64,
     user_role: UserRole,
+    user_status: UserStatus,
     family_id: Uuid,
     config: &AuthConfig,
 ) -> Result<TokenPair, TokenError> {
@@ -103,7 +120,7 @@ pub fn generate_tokens_with_family_id(
     let refresh_expires_at = now + refresh_duration;
 
     // 3. Create access token (JWT)
-    let access_claims = AccessClaims::new(user_id, user_role, now, access_expires_at);
+    let access_claims = AccessClaims::new(user_id, user_role, user_status, now, access_expires_at);
     let access_token =
         jwt::generate_jwt(&access_claims, config.access_token_secret.expose_secret())?;
 
