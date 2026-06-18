@@ -4,8 +4,8 @@ use secrecy::ExposeSecret;
 use socky_be::{
     config::{AppConfig, AuthConfig},
     create_app,
-    model::user::{dto::CreateUserDto, UserRole, UserStatus},
-    repository::{user_repo::UserRepository, Create, RepositoryManager},
+    model::user::{dto::CreateRegisteredUserDto, UserRole, UserStatus},
+    repository::{user_repo::UserRepository, RepositoryManager},
     utils::password::PasswordUtils,
 };
 
@@ -84,14 +84,16 @@ impl TestApp {
         .unwrap()
         .expect("Failed to hash password");
 
-        let dto = CreateUserDto {
+        let dto = CreateRegisteredUserDto {
             email: email.to_string(),
-            password: password_hash,
+            username: email.split('@').next().unwrap().to_string(),
+            full_name: "Test User".to_string(),
+            password_hash,
             role: UserRole::Standard,
             status: UserStatus::Active,
         };
 
-        UserRepository::create(&self.rm, &dto)
+        UserRepository::create_registered(&self.rm, &dto)
             .await
             .expect("Failed to insert user")
     }

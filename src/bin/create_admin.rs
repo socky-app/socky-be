@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
         role: UserRole::Admin,
         status: UserStatus::Active,
     };
-    let admin_id = UserRepository::create_registered_user(&rm, &dto)
+    let admin_id = UserRepository::create_registered(&rm, &dto)
         .await
         .context("Failed to insert the new admin user")?;
 

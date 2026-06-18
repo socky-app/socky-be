@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                id, \n                email as \"email!\", \n                username as \"username!\", \n                full_name, \n                password_hash as \"password_hash!\", \n                role as \"role!: _\", \n                status as \"status!: _\", \n                last_login_at, \n                created_at, \n                updated_at, \n                deleted_at\n            FROM users\n            WHERE id = $1\n              AND is_ghost = false\n              AND status = 1 -- Active\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "email!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "password_hash!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "role!: _",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 6,
+        "name": "status!: _",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 7,
+        "name": "last_login_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "394f4901597e747c64922167d2981c36a39d54388e6b7946b5aeb9a1f7c59062"
+}

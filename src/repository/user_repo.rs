@@ -21,7 +21,7 @@ pub struct UserRepository;
 
 /// Create methods
 impl UserRepository {
-    pub async fn create_registered_user(
+    pub async fn create_registered(
         rm: &RepositoryManager,
         dto: &CreateRegisteredUserDto,
     ) -> Result<i64> {
@@ -44,10 +44,7 @@ impl UserRepository {
         Ok(row.id)
     }
 
-    pub async fn create_ghost_user(
-        rm: &RepositoryManager,
-        dto: &CreateGhostUserDto,
-    ) -> Result<i64> {
+    pub async fn create_ghost(rm: &RepositoryManager, dto: &CreateGhostUserDto) -> Result<i64> {
         let row = sqlx::query!(
             r#"
             INSERT INTO users (full_name, is_ghost)
@@ -91,8 +88,42 @@ impl UserRepository {
         }
     }
 
-    /// Searches for public profiles by username or email. Only returns active, non-ghost users.
-    pub async fn search_public_profiles(
+    /// Gets a registered user by user ID. Only returns active, non-ghost users.
+    pub async fn get_active(rm: &RepositoryManager, user_id: i64) -> Result<RegisteredUser> {
+        let row = sqlx::query_as!(
+            RegisteredUser,
+            r#"
+            SELECT 
+                id, 
+                email as "email!", 
+                username as "username!", 
+                full_name, 
+                password_hash as "password_hash!", 
+                role as "role!: _", 
+                status as "status!: _", 
+                last_login_at, 
+                created_at, 
+                updated_at, 
+                deleted_at
+            FROM users
+            WHERE id = $1
+              AND is_ghost = false
+              AND status = 1 -- Active
+            "#,
+            user_id
+        )
+        .fetch_optional(rm.pool())
+        .await
+        .map_err(RepositoryError::DatabaseQueryFailed)?;
+
+        row.ok_or(RepositoryError::NotFound {
+            entity: "users",
+            id: user_id,
+        })
+    }
+
+    /// Searches for active users by username. Only returns active, non-ghost users.
+    pub async fn search_active(
         rm: &RepositoryManager,
         query_term: &str,
     ) -> Result<Vec<RegisteredUser>> {
