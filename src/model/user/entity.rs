@@ -140,6 +140,16 @@ impl UserStatus {
     pub fn can_authenticate(&self) -> Result<(), UserStatusError> {
         match self {
             UserStatus::Active => Ok(()),
+            UserStatus::Disabled => Ok(()),
+            UserStatus::Pending => Err(UserStatusError::Pending),
+            UserStatus::Locked => Err(UserStatusError::Locked),
+        }
+    }
+
+    /// Checks if the user status is fully active.
+    pub fn require_active(&self) -> Result<(), UserStatusError> {
+        match self {
+            UserStatus::Active => Ok(()),
             UserStatus::Disabled => Err(UserStatusError::Disabled),
             UserStatus::Pending => Err(UserStatusError::Pending),
             UserStatus::Locked => Err(UserStatusError::Locked),

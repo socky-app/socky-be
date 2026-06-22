@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET status = $1, deleted_at = CASE WHEN $1 = 1::smallint THEN NULL ELSE deleted_at END, updated_at = now() WHERE id = $2 AND is_ghost = false",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9ffb3f5245e79a44f4b07b588a6e1a3c853cd1f3e6087107bea4adc198697a3"
+}

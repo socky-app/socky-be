@@ -34,6 +34,9 @@ pub enum WebError {
     #[error("insuficient permission")]
     UserRole(#[from] UserRoleError),
 
+    #[error("restricted status")]
+    StatusAuthorization(UserStatusError),
+
     #[error("{0}")]
     Panic(String),
 
@@ -72,11 +75,15 @@ pub struct ClientError {
 fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
     match error {
         WebError::Controller(controller_error) => match controller_error {
+            ControllerError::UsernameAlreadyExists { .. } => {
+                (StatusCode::CONFLICT, "Username already exists.".to_string())
+            }
             ControllerError::Repository(e) => match e {
                 RepositoryError::NotFound { entity: _, id: _ } => {
                     (StatusCode::NOT_FOUND, "Resource not found.".to_string())
                 }
-                RepositoryError::DatabaseQueryFailed(_) => (
+                RepositoryError::DatabaseQueryFailed(_)
+                | RepositoryError::ConsistencyViolation(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "An unexpected internal error occurred.".to_string(),
                 ),
@@ -137,6 +144,20 @@ fn get_status_code_and_message(error: &WebError) -> (StatusCode, String) {
         ),
 
         WebError::UserRole(_) => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),
+
+        WebError::StatusAuthorization(e) => match e {
+            UserStatusError::Disabled => (
+                StatusCode::FORBIDDEN,
+                "User account is disabled.".to_string(),
+            ),
+            UserStatusError::Pending => (
+                StatusCode::FORBIDDEN,
+                "User account is pending activation.".to_string(),
+            ),
+            UserStatusError::Locked => {
+                (StatusCode::FORBIDDEN, "User account is locked.".to_string())
+            }
+        },
 
         WebError::Health(_) => (
             StatusCode::SERVICE_UNAVAILABLE,

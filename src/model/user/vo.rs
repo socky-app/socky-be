@@ -84,3 +84,10 @@ impl From<RegisteredUser> for PublicProfileVo {
         }
     }
 }
+
+/// Response payload for checking username availability.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct CheckUsernameResponseVo {
+    /// True if the username is available for registration
+    pub available: bool,
+}

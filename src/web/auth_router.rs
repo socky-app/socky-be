@@ -13,8 +13,11 @@ use crate::{
     context::CurrentUser,
     controller::auth_controller::AuthController,
     model::auth::{
-        dto::{LoginRequestDto, LogoutRequestDto, RefreshRequestDto, UpdateUserPasswordDto},
-        vo::{AuthResponseVo, LoggedUserInfoVo},
+        dto::{
+            LoginRequestDto, LogoutRequestDto, RefreshRequestDto, SignupRequestDto,
+            UpdateUserPasswordDto,
+        },
+        vo::AuthResponseVo,
     },
     repository::RepositoryManager,
     web::{ClientError, Result},
@@ -23,18 +26,41 @@ use crate::{
 /// Public auth routes
 pub fn public() -> Router<AppState> {
     Router::new()
+        .route("/signup", post(signup_handler))
         .route("/login", post(login_handler))
         .route("/refresh", post(refresh_handler))
         .route("/logout", post(logout_handler))
 }
 
 /// Protected auth routes
-pub fn protected() -> Router<AppState> {
+pub fn requires_auth() -> Router<AppState> {
     Router::new()
         .route("/logout-all", post(logout_all_handler))
         .route("/password", post(update_password_handler))
-        .route("/me", get(me_handler))
         .route("/health", get(health_handler))
+}
+
+/// Register a new user account.
+#[utoipa::path(
+    post,
+    path = "/api/auth/signup",
+    tag = "Auth",
+    summary = "Register user",
+    request_body = SignupRequestDto,
+    responses(
+        (status = 200, description = "Registration successful"),
+        (status = 409, description = "Conflict (Email or Username already exists)", body = ClientError),
+        (status = 500, description = "Internal server error", body = ClientError)
+    )
+)]
+async fn signup_handler(
+    State(rm): State<RepositoryManager>,
+    State(app_config): State<Arc<AppConfig>>,
+    Json(request): Json<SignupRequestDto>,
+) -> Result<()> {
+    trace!("Handler auth signup");
+
+    Ok(AuthController::signup(&rm, request, &app_config.auth).await?)
 }
 
 /// Login with email and password.
@@ -161,32 +187,6 @@ async fn update_password_handler(
     trace!("Handler update password");
 
     Ok(AuthController::update_password(&rm, current_user.id, request, &app_config.auth).await?)
-}
-
-/// Get user information.
-#[utoipa::path(
-    get,
-    path = "/api/auth/me",
-    tag = "Auth",
-    summary = "Get user information",
-    responses(
-        (status = 200, description = "User information retrieved", body = LoggedUserInfoVo),
-        (status = 401, description = "Unauthorized", body = ClientError),
-        (status = 500, description = "Internal server error", body = ClientError)
-    ),
-    security(
-        ("bearer-jwt" = [])
-    )
-)]
-async fn me_handler(
-    State(rm): State<RepositoryManager>,
-    current_user: CurrentUser,
-) -> Result<Json<LoggedUserInfoVo>> {
-    trace!("Handler auth me");
-
-    Ok(Json(
-        AuthController::get_login_info(&rm, current_user.id).await?,
-    ))
 }
 
 /// Check user authentication.

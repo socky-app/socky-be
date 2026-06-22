@@ -11,8 +11,8 @@ use crate::{
     repository::RepositoryManager,
     web::{
         auth_router, docs_router, fallback_router, health_router,
-        middleware::{apply_core_middleware, auth_middleware},
-        static_router,
+        middleware::{active_middleware, apply_core_middleware, auth_middleware},
+        profile_router, static_router, user_router,
     },
 };
 
@@ -31,16 +31,12 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
 
     // TODO: Configure CORS, see [here](https://github.com/idaibin/rustzen-admin/blob/main/src/core/app.rs)
 
-    let protected_api = Router::new()
-        .nest("/auth", auth_router::protected())
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth_middleware,
-        ));
+    let public_api = build_public_api();
+    let auth_api = build_auth_api(state.clone());
+    let active_api = build_active_api(state.clone());
 
-    let public_api = Router::new().nest("/auth", auth_router::public());
-
-    let api_router = protected_api
+    let api_router = auth_api
+        .merge(active_api)
         .merge(public_api)
         .fallback(fallback_router::fallback);
 
@@ -58,4 +54,25 @@ pub fn create_app(rm: RepositoryManager, app_config: AppConfig) -> Router {
 
     // TODO: Handle endpoints finishing with a slash.
     // Example, /docs works, but /docs/ is 404.
+}
+
+fn build_public_api() -> Router<AppState> {
+    Router::new()
+        .nest("/auth", auth_router::public())
+        .nest("/profile", profile_router::public())
+}
+
+fn build_auth_api(state: AppState) -> Router<AppState> {
+    Router::new()
+        .nest("/auth", auth_router::requires_auth())
+        .nest("/user", user_router::requires_auth())
+        .route_layer(middleware::from_fn_with_state(state, auth_middleware))
+}
+
+fn build_active_api(state: AppState) -> Router<AppState> {
+    Router::new()
+        .nest("/user", user_router::requires_active())
+        .nest("/profile", profile_router::requires_active())
+        .route_layer(middleware::from_fn(active_middleware))
+        .route_layer(middleware::from_fn_with_state(state, auth_middleware))
 }

@@ -14,11 +14,17 @@ use crate::{
     controller::{ControllerError, Result},
     model::{
         auth::{
-            dto::{CreateRefreshTokenDto, LoginRequestDto, UpdateUserPasswordDto},
-            vo::{AuthResponseVo, LoggedUserInfoVo},
+            dto::{
+                CreateRefreshTokenDto, LoginRequestDto, SignupRequestDto, UpdateUserPasswordDto,
+            },
+            vo::AuthResponseVo,
             UserCredentialsEntity,
         },
-        user::UserEntity,
+        user::{
+            dto::CreateRegisteredUserDto,
+            vo::{RegisteredUserVo, UserVo},
+            RegisteredUser, UserEntity, UserRole, UserStatus,
+        },
     },
     repository::{
         auth_repo::AuthRepository, user_repo::UserRepository, Create, Get, RepositoryError,
@@ -94,12 +100,69 @@ impl From<hmac::InvalidLength> for AuthError {
 pub struct AuthController;
 
 impl AuthController {
+    /// Registers a new user account.
+    ///
+    /// The user is created with a Pending status and requires support authorization before login.
+    #[tracing::instrument(name = "auth_signup", skip_all)]
+    pub async fn signup(
+        rm: &RepositoryManager,
+        request: SignupRequestDto,
+        auth_config: &AuthConfig,
+    ) -> Result<()> {
+        // 1. Hash password (blocking thread) - Do this FIRST to prevent timing attacks
+        // By always hashing the password before checking the database, we guarantee that the
+        // signup endpoint takes ~500ms regardless of whether the email/username exists or not.
+        // This acts as a cryptographic tarpit and prevents timing-based enumeration.
+        let hashed_password = {
+            let pwd = request.password.clone();
+            let pepper = auth_config.password_pepper.clone();
+            tokio::task::spawn_blocking(move || {
+                PasswordUtils::hash_password(&pwd, pepper.expose_secret())
+            })
+            .await
+            .map_err(|_e| {
+                ControllerError::Internal(
+                    "blocking thread for password hashing failed to join".to_string(),
+                )
+            })?
+            .map_err(AuthError::from)?
+        };
+
+        // 2. Validate username uniqueness first
+        if UserRepository::username_exists(rm, &request.username).await? {
+            return Err(ControllerError::UsernameAlreadyExists {
+                username: request.username.clone(),
+            });
+        }
+
+        // 3. Validate email uniqueness
+        // OWASP BEST PRACTICE: Do not return "Email already exists" to prevent enumeration.
+        if UserRepository::email_exists(rm, &request.email).await? {
+            tracing::warn!("Signup attempt with an already registered email.");
+            // Pretend the registration succeeded.
+            return Ok(());
+        }
+
+        // 3. Create user record
+        let create_dto = CreateRegisteredUserDto {
+            email: request.email,
+            username: request.username,
+            full_name: request.full_name,
+            password_hash: hashed_password,
+            role: UserRole::Standard,
+            status: UserStatus::Pending,
+        };
+
+        UserRepository::create_registered(rm, &create_dto).await?;
+
+        Ok(())
+    }
     /// Authenticates a user using their email and password.
     ///
     /// Performs constant-time password verification using a dummy hash if the email is not found,
     /// preventing username enumeration via timing analysis. Generates a fresh JWT access token
     /// and an opaque refresh token stored in the database.
-    #[tracing::instrument(name = "auth_login", skip_all, fields(email = %request.email))]
+    #[tracing::instrument(name = "auth_login", skip_all)]
     pub async fn login(
         rm: &RepositoryManager,
         request: LoginRequestDto,
@@ -150,7 +213,7 @@ impl AuthController {
             .into());
         }
 
-        credentials.status.check_status()?;
+        credentials.status.can_authenticate()?;
 
         debug!(
             user_id = %credentials.id,
@@ -158,8 +221,14 @@ impl AuthController {
         );
 
         // 5. Generate token pair
-        let tokens = token::generate_tokens(credentials.id, credentials.role, auth_config)
-            .map_err(AuthError::from)?;
+        let tokens = token::generate_tokens(
+            credentials.id,
+            credentials.role,
+            credentials.status,
+            auth_config,
+        )
+        .map_err(AuthError::from)?;
+
         let refresh_token_hash = hmac::hash_sha512(
             tokens.refresh_token.as_bytes(),
             auth_config.refresh_token_pepper.expose_secret().as_bytes(),
@@ -223,7 +292,7 @@ impl AuthController {
         let token_entity = &token_lock.entity;
 
         // 3. User status check (CRITICAL)
-        if let Err(e) = token_entity.user_status.check_status() {
+        if let Err(e) = token_entity.user_status.can_authenticate() {
             // If the user was banned since their last refresh, kill the token.
             token_lock.revoke_family().await?;
             return Err(e.into());
@@ -252,6 +321,7 @@ impl AuthController {
         let new_tokens = token::generate_tokens_with_family_id(
             token_entity.user_id,
             token_entity.user_role,
+            token_entity.user_status,
             token_entity.family_id,
             auth_config,
         )
@@ -263,12 +333,8 @@ impl AuthController {
         )
         .map_err(AuthError::from)?;
 
-        // 7. Create user info
-        let user_info = LoggedUserInfoVo {
-            id: token_entity.user_id,
-            email: token_entity.user_email.clone(),
-            role: token_entity.user_role,
-        };
+        // 7. Get user info for response
+        let user_info = Self::get_login_info(rm, token_entity.user_id).await?;
 
         // 8. Rotate tokens
         let create_dto = CreateRefreshTokenDto {
@@ -359,7 +425,7 @@ impl AuthController {
         let credentials = AuthRepository::get_user_credentials(rm, user_id).await?;
 
         // 2. Check if user is active
-        credentials.status.check_status()?;
+        credentials.status.can_authenticate()?;
 
         // 3. Verify old password (blocking thread)
         let is_valid = {
@@ -421,15 +487,21 @@ impl AuthController {
     }
 
     #[tracing::instrument(name = "auth_login_info", skip_all, fields(user_id = %user_id))]
-    pub async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<LoggedUserInfoVo> {
-        let user: UserEntity = UserRepository::get(rm, user_id).await?;
+    pub async fn get_login_info(rm: &RepositoryManager, user_id: i64) -> Result<RegisteredUserVo> {
+        let user = UserRepository::get(rm, user_id).await?;
+        let user_vo = UserVo::from(user);
 
         debug!("Logged user info retrieved successfully");
 
-        Ok(LoggedUserInfoVo {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        })
+        let info = match user_vo {
+            UserVo::Registered(r) => r,
+            UserVo::Ghost(_) => {
+                return Err(ControllerError::Internal(
+                    "Ghost users cannot log in".to_string(),
+                ));
+            }
+        };
+
+        Ok(info)
     }
 }

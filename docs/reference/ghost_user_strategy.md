@@ -26,8 +26,8 @@ A ghost user is a row in the `users` table with:
 | Scenario | Trigger | Result |
 | :--- | :--- | :--- |
 | **Never registered** | Added to a group split by name | Row created with `is_ghost = true`, only `full_name` set |
-| **Self-delete** | `DELETE /api/user/me` | Anonymized and converted to ghost |
-| **Admin delete** | `DELETE /api/user/{id}` | Anonymized and converted to ghost |
+| **Self-delete (Grace Period)** | `DELETE /api/user/me` | Account is Soft-Deleted (status becomes Disabled, `deleted_at` set). Converts to ghost after grace period. |
+| **Admin delete** | `DELETE /api/user/{id}` | Anonymized and converted to ghost immediately |
 
 ## 5. Deletion Process
 
@@ -44,10 +44,11 @@ When a real user is deleted, the following happens atomically:
 
 ### B. Session Cleanup
 
-7. All active refresh tokens are revoked
+All active refresh tokens are revoked
 
-> [!IMPORTANT]
-> Deletion is **final**. There is no grace period or account recovery. Users who want a reversible option should use the **Disable** feature instead.
+> **IMPORTANT**
+>
+> Admin deletion is **final** and immediate. However, user self-deletion (`DELETE /api/user/me`) initiates a **grace period** by soft-deleting the account (setting `status = Disabled` and `deleted_at = now()`). During this grace period, the user can log in to self-enable their account, or contact support to restore it before it is permanently anonymized into a ghost.
 
 ## 6. Orphan Data Cleanup (Background Worker)
 
@@ -59,15 +60,17 @@ Financial records form a graph of relationships between users. When one user del
 
 ### Worker Logic
 
-The worker periodically scans for orphaned financial data:
+The worker periodically scans for:
 
-1. **Find ghost-only expenses**: expenses where every participant (`payer_id` and all `expense_split.user_id`) is a ghost → delete the expense and its splits
-2. **Find ghost-only groups**: groups where every member is a ghost → delete the group, all its expenses, and related records
-3. **Find ghost-only settlements**: settlements where both `sender_id` and `receiver_id` are ghosts → delete
+1. **Grace Period Expiration**: users who initiated a self-delete (`deleted_at` is set, status is `Disabled`) where the grace period (e.g., 30 days) has expired → automatically anonymize them and convert them to ghosts.
+2. **Find ghost-only expenses**: expenses where every participant (`payer_id` and all `expense_split.user_id`) is a ghost → delete the expense and its splits
+3. **Find ghost-only groups**: groups where every member is a ghost → delete the group, all its expenses, and related records
+4. **Find ghost-only settlements**: settlements where both `sender_id` and `receiver_id` are ghosts → delete
 
 After cleanup, ghost user rows that no longer have any financial records referencing them may optionally be hard-deleted (physically removed from the database).
 
-> [!NOTE]
+> **NOTE**
+>
 > The cleanup worker is deferred to the phase where financial tables are implemented (Phase 2+). Until expenses and groups exist, there is nothing to clean up.
 
 ## 7. Foreign Key Strategy for Financial Tables
@@ -84,6 +87,7 @@ This ensures the ghost row cannot be accidentally removed while shared financial
 ## 8. Querying Ghost Users
 
 When displaying financial records to other users:
+
 - If `is_ghost = false`: show full profile (name, username, avatar link)
 - If `is_ghost = true`: show only `full_name` with a "ghost" indicator, no profile link
 

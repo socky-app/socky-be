@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) as \"total!\"\n            FROM users\n            WHERE ($1::boolean IS NULL OR is_ghost = $1)\n              AND ($2::smallint IS NULL OR status = $2)\n              AND ($3::smallint IS NULL OR role = $3)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "75b0be58777a6eacb90b9df7ee2fa6420b4962ec2b0d28011e7e8e324d7cc775"
+}

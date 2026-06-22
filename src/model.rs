@@ -5,5 +5,6 @@
 
 pub mod auth;
 pub mod money;
+pub mod pagination;
 pub mod transaction;
 pub mod user;

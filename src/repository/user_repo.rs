@@ -4,9 +4,15 @@ use chrono::Utc;
 use sqlx::QueryBuilder;
 
 use crate::{
-    model::user::{
-        dto::{CreateGhostUserDto, CreateRegisteredUserDto, UpdateProfileDto, UpdateUserStatusDto},
-        RegisteredUser, UserEntity, UserRole, UserRow, UserStatus,
+    model::{
+        pagination::{calculate_offset, PaginatedResponse},
+        user::{
+            dto::{
+                CreateGhostUserDto, CreateRegisteredUserDto, UpdateProfileDto, UpdateUserStatusDto,
+                UserQueryDto,
+            },
+            RegisteredUser, UserEntity, UserRole, UserRow, UserStatus,
+        },
     },
     repository::{
         ops::{
@@ -156,6 +162,84 @@ impl UserRepository {
         .await
         .map_err(RepositoryError::DatabaseQueryFailed)
     }
+
+    async fn count_all(rm: &RepositoryManager, query: &UserQueryDto) -> Result<i64> {
+        let status = query.status.map(|s| s as i16);
+        let role = query.role.map(|r| r as i16);
+
+        let count_row = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as "total!"
+            FROM users
+            WHERE ($1::boolean IS NULL OR is_ghost = $1)
+              AND ($2::smallint IS NULL OR status = $2)
+              AND ($3::smallint IS NULL OR role = $3)
+            "#,
+            query.is_ghost,
+            status,
+            role
+        )
+        .fetch_one(rm.pool())
+        .await
+        .map_err(RepositoryError::DatabaseQueryFailed)?;
+
+        Ok(count_row.total)
+    }
+
+    pub async fn list_all(
+        rm: &RepositoryManager,
+        query: &UserQueryDto,
+    ) -> Result<PaginatedResponse<UserEntity>> {
+        let offset = calculate_offset(query.page, query.limit);
+        let total = Self::count_all(rm, query).await?;
+        if total == 0 {
+            return Ok(PaginatedResponse::new(
+                Vec::new(),
+                0,
+                query.page.max(1),
+                query.limit,
+            ));
+        }
+
+        let status = query.status.map(|s| s as i16);
+        let role = query.role.map(|r| r as i16);
+
+        let rows = sqlx::query_as!(
+            UserRow,
+            r#"
+            SELECT 
+                id, email, username, full_name, password_hash, is_ghost, 
+                role as "role: _", status as "status: _", 
+                last_login_at, created_at, updated_at, deleted_at 
+            FROM users
+            WHERE ($1::boolean IS NULL OR is_ghost = $1)
+              AND ($2::smallint IS NULL OR status = $2)
+              AND ($3::smallint IS NULL OR role = $3)
+            ORDER BY id ASC
+            LIMIT $4 OFFSET $5
+            "#,
+            query.is_ghost,
+            status,
+            role,
+            query.limit,
+            offset
+        )
+        .fetch_all(rm.pool())
+        .await
+        .map_err(RepositoryError::DatabaseQueryFailed)?;
+
+        let entities = rows
+            .into_iter()
+            .map(|r| UserEntity::try_from(r).map_err(RepositoryError::ConsistencyViolation))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(PaginatedResponse::new(
+            entities,
+            total,
+            query.page.max(1),
+            query.limit,
+        ))
+    }
 }
 
 /// Update methods
@@ -200,7 +284,7 @@ impl UserRepository {
         dto: &UpdateUserStatusDto,
     ) -> Result<()> {
         sqlx::query!(
-            "UPDATE users SET status = $1, updated_at = now() WHERE id = $2 AND is_ghost = false",
+            "UPDATE users SET status = $1, deleted_at = CASE WHEN $1 = 1::smallint THEN NULL ELSE deleted_at END, updated_at = now() WHERE id = $2 AND is_ghost = false",
             dto.status as _,
             id
         )

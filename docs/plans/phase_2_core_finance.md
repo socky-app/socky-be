@@ -1,6 +1,7 @@
 # Phase 2: Core Expense & Income
 
-> [!NOTE]
+> **NOTE**
+>
 > This plan is not yet structured. It collects items identified during Phase 1 planning that are deferred to Phase 2, alongside the original roadmap goals. A detailed implementation plan will be created when Phase 2 work begins.
 
 ---
@@ -17,11 +18,12 @@ Implement personal transaction tracking (debit vs. credit card cycles with insta
 
 When users are deleted in Phase 1, the delete endpoint only anonymizes credentials, converts the user to a ghost, and revokes tokens. No financial data cleanup is performed at delete time.
 
-A **background worker** must be implemented to periodically scan for and clean up orphaned financial data:
+A **background worker** must be implemented to periodically scan for and clean up orphaned financial data and process account deletions:
 
-1. **Ghost-only expenses**: expenses where every participant (`payer_id` and all `expense_split.user_id`) is a ghost → delete the expense and its splits
-2. **Ghost-only groups**: groups where every member is a ghost → delete the group, all its expenses, and related records
-3. **Ghost-only settlements**: settlements where both `sender_id` and `receiver_id` are ghosts → delete
+1. **Grace Period Expiration**: users who initiated a self-delete (`deleted_at` is set, status is `Disabled`) where the grace period (e.g., 30 days) has expired → automatically anonymize them and convert them to ghosts.
+2. **Ghost-only expenses**: expenses where every participant (`payer_id` and all `expense_split.user_id`) is a ghost → delete the expense and its splits
+3. **Ghost-only groups**: groups where every member is a ghost → delete the group, all its expenses, and related records
+4. **Ghost-only settlements**: settlements where both `sender_id` and `receiver_id` are ghosts → delete
 
 After cleanup, ghost user rows with zero remaining financial references may optionally be hard-deleted (physically removed from the database).
 

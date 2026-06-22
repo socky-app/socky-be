@@ -16,6 +16,9 @@ pub enum ControllerError {
     #[error("invalid user status")]
     UserStatus(#[from] UserStatusError),
 
+    #[error("Username already exists: {username}")]
+    UsernameAlreadyExists { username: String },
+
     #[error("{0}")]
     Internal(String),
 }

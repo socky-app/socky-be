@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::model::user::{UserRole, UserStatus};
+use crate::model::{
+    pagination,
+    user::{UserRole, UserStatus},
+};
 
 /// Data transfer object representing the payload to create a new user.
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
@@ -44,5 +47,31 @@ pub struct UpdateProfileDto {
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct UpdateUsernameDto {
     /// The user's new username handle.
+    pub username: String,
+}
+
+/// Query parameters for listing users
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct UserQueryDto {
+    pub is_ghost: Option<bool>,
+    pub status: Option<UserStatus>,
+    pub role: Option<UserRole>,
+    #[serde(default = "pagination::default_page")]
+    pub page: i64,
+    #[serde(default = "pagination::default_limit")]
+    pub limit: i64,
+}
+
+/// Query parameters for searching public profiles
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct ProfileSearchQueryDto {
+    /// The search query
+    pub query: String,
+}
+
+/// Query parameters for checking username availability
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct CheckUsernameQueryDto {
+    /// The username to check
     pub username: String,
 }

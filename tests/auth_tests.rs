@@ -120,7 +120,7 @@ async fn test_access_protected_route_without_token(pool: sqlx::PgPool) {
 
     let response = app
         .client
-        .get(format!("{}/api/auth/me", app.base_url))
+        .get(format!("{}/api/auth/health", app.base_url))
         .send()
         .await
         .expect("Failed to execute request");
@@ -152,7 +152,7 @@ async fn test_access_protected_route_with_token(pool: sqlx::PgPool) {
 
     let response = app
         .client
-        .get(format!("{}/api/auth/me", app.base_url))
+        .get(format!("{}/api/auth/health", app.base_url))
         .bearer_auth(access_token)
         .send()
         .await
